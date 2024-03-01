@@ -1,0 +1,146 @@
+config:
+  topology.workers: 1
+  topology.message.timeout.secs: 300
+  topology.max.spout.pending: 1000
+  topology.backpressure.enable: true
+  topology.debug: false
+
+  # Number of fetcher threads
+  fetcher.threads.number: 200
+  # fetcher.timeout.queue: 300
+
+  # revisit a fetched page (value in minutes)
+  # default: 1440 (daily)
+  # set it to -1 to never refetch a page
+  fetchInterval.default: 10080
+
+  # revisit a page with a fetch error (value in minutes)
+  # default: 120 (two hours)
+  # set it to -1 to never refetch a page
+  fetchInterval.fetch.error: 120
+
+  # revisit a page with an error (value in minutes)
+  # default: -1 (never revisit)
+  fetchInterval.error: -1
+
+  # Scheduler class for the assignment of the nextFetchDate
+  scheduler.class: "com.digitalpebble.stormcrawler.persistence.AdaptiveScheduler"
+
+  # exact counts, no sampled metrics
+  topology.stats.sample.rate: 1.0
+  # (note: turn on sampling for better performance,
+  #        comment out to use default sample rate)
+
+  # override the JVM parameters for the workers
+  topology.worker.childopts: "-Xmx8G -Djava.net.preferIPv4Stack=true"
+
+  # mandatory when using Flux
+  topology.kryo.register:
+    - com.digitalpebble.stormcrawler.Metadata
+    - com.digitalpebble.stormcrawler.persistence.Status
+
+  # set to 0 to deactivate debugging
+  topology.eventlogger.executors: 0
+
+  # Metrics consumers:
+  # topology.metrics.consumer.register:
+  #   - class: "org.apache.storm.metric.LoggingMetricsConsumer"
+  #     parallelism.hint: 1
+
+  # URLFrontier configurations
+  urlfrontier.host: "${urlfrontier.host}"
+  urlfrontier.port: ${urlfrontier.port}
+  urlfrontier.max.buckets: 25
+  urlfrontier.max.urls.per.bucket: 3
+  urlfrontier.delay.requestable: 300
+  urlfrontier.cache.expireafter.sec: 240
+  urlfrontier.updater.max.messages: 1000
+
+  # status index and fetcher queues are partitioned by domain
+  partition.url.mode: "byDomain"
+
+  # content limit for HTTP payload
+  http.content.limit: 1048576
+
+  # store partial fetches as trimmed content (some content has been fetched,
+  # but reading more data from socket failed, eg. because of a network timeout)
+  http.content.partial.as.trimmed: true
+
+  # store HTTP headers (required for WARC files)
+  http.store.headers: true
+
+  # added http agent
+  http.agent.name: "Owler@ows.eu/1"
+  http.agent.version: ""
+  http.agent.description: ""
+  http.agent.url: ""
+  http.agent.email: ""
+
+  # added robots agents
+  http.robots.agents: "Owler@ows.eu/1"
+
+  # automatic discovery of sitemaps
+  # add SitemapParserBolt for discovering new URLs from sitemaps
+  sitemap.discovery: true
+  sitemap.schedule.delay: 1
+
+  status.updater.use.cache: true
+  status.updater.cache.spec: "maximumSize=250000,expireAfterAccess=4h"
+
+  # lists the metadata to persist to storage
+  # these are not transfered to the outlinks
+  metadata.persist:
+    - _redirTo
+    - fetch.statusCode
+    - error.cause
+    - error.source
+    - last-modified
+    - signature
+    - fetchInterval
+    - isSitemap
+    - isFeed
+    - discoveryDate
+    - lastProcessedDate
+    - isDiscoveredOnSitemap
+    - is*
+    - parse.*
+    - canonical
+    - robots
+    - urlId
+    - warc-filename
+    - owseu.onDemandCrawl
+
+  # lists the metadata to store in the WARC files
+  warc.metadata:
+    - curlieLabel
+    - robots
+    - canonical
+    - parse.meta.author
+    - parse.meta.copyright
+    - parse.license
+
+  ##########################################################
+  ### configuration of parser bolt
+
+  # URL filter and normalizer configuration
+  urlfilters.config.file: "urlfilters.json"
+
+  # parse filters to add additional fields, eg. via XPath expressions
+  parsefilters.config.file: "parsefilters.json"
+
+  # do not emit outlinks to avoid flooding the status index
+  # with outgoing links
+  # parser.emitOutlinks: false
+
+  awscreds:
+    fs.s3a.fast.upload.buffer: "array"
+    fs.s3a.multipart.size: "500M"
+    fs.s3a.fast.upload.active.blocks: "8"
+    fs.s3a.block.size: "100M"
+    fs.s3a.multipart.purge: "true"
+    fs.s3a.multipart.purge.age: "86400"
+    fs.s3a.access.key: "${s3a.access.key}"
+    fs.s3a.secret.key: "${s3a.secret.key}"
+    fs.s3a.connection.ssl.enabled: "false"
+    fs.s3a.path.style.access: "true"
+    fs.s3a.endpoint: "${s3a.endpoint}"

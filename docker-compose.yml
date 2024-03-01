@@ -1,0 +1,84 @@
+version: "3.6"
+
+services:
+  # Apache Storm components
+  # - Zookeeper coordinates the communication between Nimbus and the Supervisors
+  zookeeper:
+    image: zookeeper:${ZOOKEEPER_VERSION:-3.6.3}
+    container_name: zookeeper
+    ports:
+      - 2181:2181
+    restart: always
+
+  # - the daemon Nimbus runs on the master node
+  storm-nimbus:
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: storm-nimbus
+    ## must override worker.childopts and remove options not available
+    ## for Java 11: `-XX:+PrintGCDateStamps`, etc
+    command: storm nimbus
+        -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
+    depends_on:
+      - zookeeper
+    links:
+      - zookeeper
+    ports:
+      - 6627:6627
+    external_links:
+      - zookeeper
+    restart: always
+
+  # - the Supervisors run on the worker nodes
+  storm-supervisor:
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: storm-supervisor
+    ## must override worker.childopts and remove options not available
+    ## for Java 11: `-XX:+PrintGCDateStamps`, etc
+    command: storm supervisor
+        -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
+    depends_on:
+      - zookeeper
+      - storm-nimbus
+    links:
+      - zookeeper
+      - storm-nimbus:nimbus
+    volumes:
+      - ${INPUT:-./input}:/data/input
+      - ${LOGS:-./logs}:/logs
+      - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
+      - ./model:/data/model
+    external_links:
+      - zookeeper
+    restart: always
+    cap_add:
+      - NET_ADMIN
+
+  # - the Storm UI provides diagnostics about the Storm cluster
+  storm-ui:
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: storm-ui
+    command: storm ui
+    depends_on:
+      - storm-nimbus
+    links:
+      - storm-nimbus:nimbus
+    ports:
+      - 8080:8080
+    external_links:
+      - zookeeper
+    restart: always
+
+  # - to launch a topology
+  # - will exit on startup
+  owler:
+    build: .
+    container_name: owler
+    command: /bin/bash
+    depends_on:
+      - storm-nimbus
+    links:
+      - storm-nimbus:nimbus
+    volumes:
+      - ${INPUT:-./input}:/data/input
+      - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
+    restart: "no"

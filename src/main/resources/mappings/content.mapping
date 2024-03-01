@@ -1,0 +1,84 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 8,
+      "number_of_replicas": 1,
+      "refresh_interval": "60s"
+    }
+  },
+  "mappings": {
+    "_source": {
+      "enabled": true
+    },
+    "properties": {
+      "content": {
+        "type": "text",
+        "index": true
+      },
+      "host": {
+        "type": "keyword",
+        "index": true,
+        "store": true
+      },
+      "title": {
+        "type": "text",
+        "index": true,
+        "store": true
+      },
+      "url": {
+        "type": "keyword",
+        "index": false,
+        "store": true
+      },
+      "keywords": {
+        "type": "text",
+        "index": true,
+        "store": true
+      },
+      "description": {
+        "type": "text",
+        "index": true,
+        "store": true
+      },
+      "publicationdate": {
+        "type": "date",
+        "format": "date_optional_time||epoch_second",
+        "ignore_malformed": true,
+        "index": true,
+        "store": false
+      },
+      "sitename": {
+        "type": "text",
+        "index": true,
+        "store": true
+      },
+      "pagetype": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "favicon": {
+        "type": "keyword",
+        "index": false,
+        "store": true
+      },
+      "pageimage": {
+        "type": "keyword",
+        "index": false,
+        "store": true
+      },
+      "feedlink": {
+        "type": "keyword",
+        "index": false,
+        "store": true
+      },
+      "capturetime": {
+        "type": "date",
+        "format": "date_time||epoch_second",
+        "ignore_malformed": true,
+        "index": true,
+        "store": false
+      }
+    }
+  }
+}

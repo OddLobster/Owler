@@ -1,0 +1,26 @@
+format: jb-book
+root: index.md
+parts:
+- caption: Installation Guide
+  chapters:
+  - file: intro/install/index.md
+- caption: User Guide
+  chapters:
+  - file: user/getting-started/index.md
+  - file: user/tutorial/index.md
+  - file: user/crawler-options/index.md
+  - file: user/resiliparse-integration/index.md
+  - file: user/tips-and-tricks/index.md
+- caption: Administration Guide
+  chapters:
+  - file: administration/warc-elastic-topology/index.md
+- caption: Developer Guide
+  chapters:
+  - file: developer/building-topology/index.md
+- caption: References
+  chapters:
+  - file: bib.md
+- caption: About Owler
+  chapters:
+  - url: http://ows.eu/owler
+    title: OWler Website

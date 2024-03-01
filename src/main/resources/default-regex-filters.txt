@@ -1,0 +1,30 @@
+# skip file: ftp: and mailto: urls
+-^(file|ftp|mailto):
+
+# allow gzipped xml files for sitemaps
++\.xml(\.gz)?(\?|&|$)
+
+# skip image and other suffixes we can't parse or are not likely to be relevant
+# if you want to crawl images or videos or archives then you should comment out this line
+-(?i)\.(apk|deb|cab|iso|gif|jpg|png|svg|ico|css|sit|eps|wmf|rar|tar|jar|zip|gz|bz2|rpm|tgz|mov|exe|jpeg|jpe|bmp|js|mpg|mp3|mp4|m4a|ogv|kml|wmv|swf|flv|mkv|m4v|webm|ra|wma|wav|avi|xspf|m3u)(\?|&|$)
+
+# skip URLs with slash-delimited segment that repeats 3+ times, to break loops
+# very time-consuming : use BasicURLFilter instead
+# -.*(/[^/]+)/[^/]+\1/[^/]+\1/
+
+# exclude localhost and equivalents to avoid that information
+# can be leaked by placing faked links pointing to web interfaces
+# of services running on the crawling machine (e.g., Elasticsearch,
+# Storm)
+#
+# - exclude localhost and loop-back addresses
+#     http://localhost:8080
+#     http://127.0.0.1/ .. http://127.255.255.255/
+#     http://[::1]/
+-^https?://(?:localhost|127(?:\.(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))){3}|\[::1\])(?::\d+)?(?:/|$)
+
+# exclude all IP address spaces
+-^https?://(?:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::\d+)?(?:/|$)
+
+# accept anything else
++.

@@ -1,0 +1,2 @@
+config:
+  urlfilters.config.file: "sitemap-urlfilters.json"
