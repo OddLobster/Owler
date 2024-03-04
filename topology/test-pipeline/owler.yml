@@ -40,7 +40,7 @@ config:
     - com.digitalpebble.stormcrawler.persistence.Status
 
   # set to 0 to deactivate debugging
-  topology.eventlogger.executors: 1
+  topology.eventlogger.executors: 0
 
   # Metrics consumers:
   # topology.metrics.consumer.register:

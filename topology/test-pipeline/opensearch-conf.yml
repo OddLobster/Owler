@@ -1,0 +1,18 @@
+# configuration for OpenSearch resources
+  
+config:
+  # Opensearch metricsConsumer
+  opensearch.metrics.addresses: ${eu.ows.owler.opensearch.address}
+  opensearch.metrics.user: ${eu.ows.owler.opensearch.user}
+  opensearch.metrics.password: ${eu.ows.owler.opensearch.password}
+  opensearch.metrics.index.name: ${eu.ows.owler.opensearch.metrics}
+  opensearch.metrics.bulkActions: 1000
+  opensearch.metrics.flushInterval: "5s"
+  opensearch.metrics.concurrentRequests: 2
+
+  topology.metrics.consumer.register:
+    # - class: "org.apache.storm.metric.LoggingMetricsConsumer"
+    #   parallelism.hint: 1
+    - class: "com.digitalpebble.stormcrawler.opensearch.metrics.MetricsConsumer"
+      parallelism.hint: 1
+      argument: "yyyy-MM-dd"

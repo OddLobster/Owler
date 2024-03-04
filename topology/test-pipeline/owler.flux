@@ -1,8 +1,11 @@
-name: "${eu.ows.owler.crawler.name}"
+name: "owler-regular-pipeline"
 
 # - reads URLs from the URLFrontier using the FrontierSpout
 # - it follows standard StormCrawler bolts for parsing and indexing the content
 # - writes page captures into new WARC files using WARCHdfsBolt
+
+config:
+  status.redirection: true
 
 includes:
   - resource: true
@@ -13,15 +16,14 @@ includes:
     file: "topology/regular-pipeline/owler.yml"
     override: true
 
-#   - resource: false
-#     file: "topology/regular-pipeline/opensearch-conf.yml"
-#     override: true
+  - resource: false
+    file: "topology/regular-pipeline/opensearch-conf.yml"
+    override: true
+    
 
 components:
   - id: "WARCFileNameFormat"
     className: "eu.ows.owler.warc.OWSWARCFileNameFormat"
-    constructorArgs:
-      - ${eu.ows.owler.crawler.name}
     configMethods:
       - name: "withPath"
         args:
@@ -42,7 +44,7 @@ components:
       - name: "put"
         args:
          - "software"
-         - "OWLer https://openwebsearch.eu/owler/"
+         - "OWler https://openwebsearch.eu/owler/"
       - name: "put"
         args:
          - "format"
@@ -55,22 +57,14 @@ components:
 spouts:
   - id: "frontierspout"
     className: "com.digitalpebble.stormcrawler.urlfrontier.Spout"
-    parallelism: 1
-
-  - id: "filespout"
-    className: "com.digitalpebble.stormcrawler.spout.FileSpout"
-    parallelism: 1
-    constructorArgs:
-      - ${eu.ows.owler.spouts.input}
-      - ${eu.ows.owler.filespout.seeds}
-      - false
+    parallelism: 10
 
 bolts:
   - id: "fetcher"
-    className: "com.digitalpebble.stormcrawler.bolt.SimpleFetcherBolt"
+    className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
     parallelism: 1
-  - id: "parser"
-    className: "eu.ows.owler.bolt.BasicParserBolt"
+  - id: "jsoup"
+    className: "com.digitalpebble.stormcrawler.bolt.JSoupParserBolt"
     parallelism: 4
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
@@ -78,14 +72,20 @@ bolts:
   - id: "tika"
     className: "com.digitalpebble.stormcrawler.tika.ParserBolt"
     parallelism: 1
-  - id: "status_frontier"
-    className: "com.digitalpebble.stormcrawler.urlfrontier.StatusUpdaterBolt"
-    parallelism: 1
   - id: "index"
     className: "com.digitalpebble.stormcrawler.indexing.DummyIndexer"
     parallelism: 1
+  - id: "status_frontier"
+    className: "com.digitalpebble.stormcrawler.urlfrontier.StatusUpdaterBolt"
+    parallelism: 1
+  - id: "logger_shunt"
+    className: "eu.ows.owler.log.RedirectionBolt"
+    parallelism: 1
+  - id: "status_logger"
+    className: "eu.ows.owler.log.StatusLoggerBolt"
+    parallelism: 1
   - id: "warc"
-    className: "eu.ows.owler.warc.OWSWARCHdfsBolt"
+    className: "com.digitalpebble.stormcrawler.warc.WARCHdfsBolt"
     parallelism: 1
     configMethods:
       - name: "withFileNameFormat"
@@ -106,22 +106,22 @@ bolts:
           - "${eu.ows.owler.warcbolt.fsurl}"
 
 streams:
-  - from: "filespout"
+  - from: "frontierspout"
     to: "fetcher"
     grouping:
       type: LOCAL_OR_SHUFFLE
 
   - from: "fetcher"
-    to: "parser"
+    to: "jsoup"
     grouping:
       type: LOCAL_OR_SHUFFLE
 
-  - from: "parser"
+  - from: "jsoup"
     to: "warc"
     grouping:
       type: LOCAL_OR_SHUFFLE
 
-  - from: "parser"
+  - from: "jsoup"
     to: "shunt"
     grouping:
       type: LOCAL_OR_SHUFFLE
@@ -143,29 +143,39 @@ streams:
       type: LOCAL_OR_SHUFFLE
 
   - from: "fetcher"
-    to: "status_frontier"
+    to: "logger_shunt"
     grouping:
-      type: FIELDS
-      args: ["url"]
+      type: LOCAL_OR_SHUFFLE
       streamId: "status"
 
-  - from: "parser"
-    to: "status_frontier"
+  - from: "jsoup"
+    to: "logger_shunt"
     grouping:
-      type: FIELDS
-      args: ["url"]
+      type: LOCAL_OR_SHUFFLE
       streamId: "status"
 
   - from: "index"
+    to: "logger_shunt"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+      streamId: "status"
+
+  - from: "tika"
+    to: "logger_shunt"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+      streamId: "status"
+
+  - from: "logger_shunt"
     to: "status_frontier"
     grouping:
       type: FIELDS
       args: ["url"]
       streamId: "status"
 
-  - from: "tika"
-    to: "status_frontier"
+  - from: "logger_shunt"
+    to: "status_logger"
     grouping:
       type: FIELDS
       args: ["url"]
-      streamId: "status"
+      streamId: "logfile_status"

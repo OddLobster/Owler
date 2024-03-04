@@ -73,7 +73,7 @@ services:
   owler:
     build: .
     container_name: owler
-    command: /bin/bash
+    command: storm jar owler.jar org.apache.storm.flux.Flux topology/regular-pipeline/owler.flux --filter dev.properties
     depends_on:
       - storm-nimbus
     links:

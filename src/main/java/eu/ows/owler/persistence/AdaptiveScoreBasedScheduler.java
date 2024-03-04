@@ -4,13 +4,12 @@ import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AdaptiveScheduler;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import eu.ows.owler.util.CustomScore;
-
 import java.util.*;
 
 /**
  * In this scheduler, we use the adaptive scheduler with modification on case of fetch status code.
- * First we extract the number of increased minutes by comparing
- * the provided value from adaptive class with current time, then we apply our quality evaluation.
+ * First we extract the number of increased minutes by comparing the provided value from adaptive
+ * class with current time, then we apply our quality evaluation.
  */
 public class AdaptiveScoreBasedScheduler extends AdaptiveScheduler {
 
@@ -30,6 +29,7 @@ public class AdaptiveScoreBasedScheduler extends AdaptiveScheduler {
         }
         return op;
     }
+
     public Optional<Date> getUpdatedDelayPeriod(Metadata metadata, Optional<Date> date) {
         Optional<Date> op;
         int baseDelayPeriod = CustomScore.getDiffMinNow(date);

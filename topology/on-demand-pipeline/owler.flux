@@ -81,10 +81,18 @@ bolts:
       - name: "withFsUrl"
         args:
           - "${eu.ows.owler.warcbolt.fsurl}"
+  - id: "stdout"
+    className: "com.digitalpebble.stormcrawler.indexing.StdOutIndexer"
+    parallelism: 1
 
 streams:
   - from: "filespout"
     to: "fetcher"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+  
+  - from: "filespout"
+    to: "stdout"
     grouping:
       type: LOCAL_OR_SHUFFLE
       

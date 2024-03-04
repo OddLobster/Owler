@@ -111,7 +111,9 @@
 				<version>6.1.0</version>
 				<configuration>
 					<skipSystemScope>true</skipSystemScope>
+    				<assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
 				</configuration>
+
 				<executions>
 					<execution>
 						<goals>
@@ -160,6 +162,14 @@
 			<artifactId>storm-crawler-core</artifactId>
 			<version>${storm-crawler.version}</version>
 		</dependency>
+        <!-- Include  because of: Error preparing HdfsBolt: Socket not created by this factory -->
+		<dependency>
+         	<groupId>org.apache.httpcomponents</groupId>
+        	<artifactId>httpclient</artifactId>
+        	<version>4.5</version>
+    	</dependency>
+
+
 		<dependency>
 			<groupId>com.digitalpebble.stormcrawler</groupId>
 			<artifactId>storm-crawler-warc</artifactId>

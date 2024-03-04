@@ -38,7 +38,7 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
         // dummy sync policy
         withSyncPolicy(new CountSyncPolicy(10));
         // default local filesystem
-        withFsUrl("file:///");
+        withFsUrl("s3a://owlerbucket");
     }
 
     public OWSWARCHdfsBolt withHeader(Map<String, String> header_fields) {

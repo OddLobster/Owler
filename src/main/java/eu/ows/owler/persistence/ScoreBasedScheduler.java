@@ -6,14 +6,12 @@ import com.digitalpebble.stormcrawler.persistence.Scheduler;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import eu.ows.owler.util.CustomScore;
-
 import java.util.*;
 
 /**
  * In this scheduler, we use the default scheduler with modification on case of fetch status code.
  * We apply our quality evaluation directly on the defaultFetchInterval.
  */
-
 public class ScoreBasedScheduler extends Scheduler {
 
     // fetch intervals in minutes
@@ -39,7 +37,8 @@ public class ScoreBasedScheduler extends Scheduler {
 
         switch (status) {
             case FETCHED:
-                minutesIncrement = CustomScore.getDelayPeriod(metadata, scores, defaultFetchInterval);
+                minutesIncrement =
+                        CustomScore.getDelayPeriod(metadata, scores, defaultFetchInterval);
                 break;
             case FETCH_ERROR:
                 minutesIncrement = fetchErrorFetchInterval;
