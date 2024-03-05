@@ -4,8 +4,6 @@ services:
   # Apache Storm components
   # - Zookeeper coordinates the communication between Nimbus and the Supervisors
   zookeeper:
-    networks:
-      - storm_network
     image: zookeeper:${ZOOKEEPER_VERSION:-3.6.3}
     container_name: zookeeper
     ports:
@@ -14,8 +12,6 @@ services:
 
   # - the daemon Nimbus runs on the master node
   storm-nimbus:
-    networks:
-      - storm_network
     image: storm:${STORM_VERSION:-2.4.0}
     container_name: storm-nimbus
     ## must override worker.childopts and remove options not available
@@ -34,8 +30,6 @@ services:
 
   # - the Supervisors run on the worker nodes
   storm-supervisor:
-    networks:
-      - storm_network
     image: storm:${STORM_VERSION:-2.4.0}
     container_name: storm-supervisor
     ## must override worker.childopts and remove options not available
@@ -62,8 +56,6 @@ services:
 
   # - the Storm UI provides diagnostics about the Storm cluster
   storm-ui:
-    networks:
-      - storm_network
     image: storm:${STORM_VERSION:-2.4.0}
     container_name: storm-ui
     command: storm ui
@@ -80,8 +72,6 @@ services:
   # - to launch a topology
   # - will exit on startup
   owler:
-    networks:
-      - storm_network
     build: .
     container_name: owler
     command: storm jar owler.jar org.apache.storm.flux.Flux topology/regular-pipeline/owler.flux --filter dev.properties
@@ -96,6 +86,4 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-networks:
-  storm_network:
-    driver: bridge
+  

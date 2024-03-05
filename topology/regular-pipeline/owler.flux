@@ -54,20 +54,20 @@ components:
 
 spouts:
   - id: "frontierspout"
-    className: "com.digitalpebble.stormcrawler.urlfrontier.Spout"
+    className: "eu.ows.owler.spout.FrontierSpout"
     parallelism: 1
 
-  - id: "filespout"
-    className: "com.digitalpebble.stormcrawler.spout.FileSpout"
-    parallelism: 1
-    constructorArgs:
-      - ${eu.ows.owler.spouts.input}
-      - ${eu.ows.owler.filespout.seeds}
-      - false
+#  - id: "filespout"
+#    className: "com.digitalpebble.stormcrawler.spout.FileSpout"
+#    parallelism: 1
+#    constructorArgs:
+#      - ${eu.ows.owler.spouts.input}
+#      - ${eu.ows.owler.filespout.seeds}
+#      - false
 
 bolts:
   - id: "fetcher"
-    className: "com.digitalpebble.stormcrawler.bolt.SimpleFetcherBolt"
+    className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
     parallelism: 1
   - id: "parser"
     className: "eu.ows.owler.bolt.BasicParserBolt"
@@ -106,7 +106,7 @@ bolts:
           - "${eu.ows.owler.warcbolt.fsurl}"
 
 streams:
-  - from: "filespout"
+  - from: "frontierspout"
     to: "fetcher"
     grouping:
       type: LOCAL_OR_SHUFFLE
