@@ -72,6 +72,15 @@ bolts:
   - id: "parser"
     className: "eu.ows.owler.bolt.BasicParserBolt"
     parallelism: 4
+  - id: "test"
+    className: "eu.ows.owler.bolt.TestBolt"
+    parallelism: 1
+  - id: "second_test"
+    className: "eu.ows.owler.bolt.SecondTestBolt"
+    parallelism: 1
+  - id: "hitsbolt"
+    className: "eu.ows.owler.bolt.HITSBolt"
+    parallelism: 1
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
     parallelism: 1
@@ -115,6 +124,22 @@ streams:
     to: "parser"
     grouping:
       type: LOCAL_OR_SHUFFLE
+
+  - from: "parser"
+    to: "test"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+
+  - from: "test"
+    to: "second_test"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+      
+  - from: "parser"
+    to: "hitsbolt"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+      streamId: "hits"
 
   - from: "parser"
     to: "warc"

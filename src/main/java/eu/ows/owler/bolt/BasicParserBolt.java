@@ -255,6 +255,7 @@ public class BasicParserBolt extends StatusEmitterBolt {
                                 outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
             }
         }
+        collector.emit("hits", tuple, new Values(url, outlinks));
 
         // emit each document/subdocument in the ParseResult object
         // there should be at least one ParseData item for the "parent" URL
@@ -295,6 +296,7 @@ public class BasicParserBolt extends StatusEmitterBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
         declarer.declare(new Fields("url", "content", "metadata", "text"));
+        declarer.declareStream("hits", new Fields("url", "child_urls"));
     }
 
     protected List<Outlink> toOutlinks(
@@ -349,7 +351,7 @@ public class BasicParserBolt extends StatusEmitterBolt {
                 outlinks.put(outlink.getTargetURL(), outlink);
             }
         }
-
+        LOG.info("Found {} outlinks from {}\n", outlinks.size(), url);
         return new LinkedList<>(outlinks.values());
     }
 }
