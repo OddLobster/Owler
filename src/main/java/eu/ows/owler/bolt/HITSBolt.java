@@ -20,11 +20,12 @@ public class HITSBolt extends BaseRichBolt {
     private OutputCollector collector;
     private static final Logger LOG = LoggerFactory.getLogger(HITSBolt.class);
 
-    private Map<String, Set<String>> links = new HashMap<>();
-    private Map<String, Double> authorities = new HashMap<>();
-    private Map<String, Double> hubs = new HashMap<>();
+    public Map<String, Set<String>> links = new HashMap<>();
+    public Map<String, Double> authorities = new HashMap<>();
+    public Map<String, Double> hubs = new HashMap<>();
     private int triggerCounter = 0;
     private final int computationTriggerThreshold = 100;
+    private int callCounter = 0;
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -36,7 +37,7 @@ public class HITSBolt extends BaseRichBolt {
         this.collector = collector;
     }
 
-    private void addLinkToGraph(String from, String to) {
+    public void addLinkToGraph(String from, String to) {
         links.putIfAbsent(from, new HashSet<String>());
         links.get(from).add(to);
 
@@ -49,6 +50,10 @@ public class HITSBolt extends BaseRichBolt {
 
     private void performHITS(int numIterations) {
         for (int i = 0; i < numIterations; i++) {
+
+            Map<String, Double> hubsCopy = new HashMap<>(hubs);
+            Map<String, Double> authoritiesCopy = new HashMap<>(authorities);
+
             double norm = 0;
             // calculate autority values
             for (Map.Entry<String, Double> entry : authorities.entrySet()) {
@@ -57,7 +62,7 @@ public class HITSBolt extends BaseRichBolt {
                 for (Map.Entry<String, Set<String>> inPage : links.entrySet()) {
                     // only consider incoming pages
                     if (inPage.getValue().contains(page)) {
-                        authScore += hubs.get(inPage.getKey());
+                        authScore += hubsCopy.get(inPage.getKey());
                     }
                 }
                 authorities.put(page, authScore);
@@ -76,7 +81,7 @@ public class HITSBolt extends BaseRichBolt {
                 String page = entry.getKey();
                 double hubScore = 0;
                 for (String outPage : links.getOrDefault(page, new HashSet<>())) {
-                    hubScore += authorities.get(outPage);
+                    hubScore += authoritiesCopy.get(outPage);
                 }
                 hubs.put(page, hubScore);
                 norm += hubScore * hubScore;
@@ -96,8 +101,8 @@ public class HITSBolt extends BaseRichBolt {
         String url = input.getStringByField("url");
         List<Outlink> child_urls = (List<Outlink>) input.getValueByField("child_urls");
 
-        LOG.info("HITS BOLT");
-        LOG.info("Parent: {}", url);
+        callCounter += 1;
+        LOG.info("Called HITS {} times", callCounter);
         for (Outlink child : child_urls) {
             addLinkToGraph(url, child.getTargetURL());
         }
@@ -139,5 +144,21 @@ public class HITSBolt extends BaseRichBolt {
         // this.collector.emit(input, new Values(url, content, metadata, text));
 
         collector.ack(input);
+    }
+
+    public void performHITSTest(int numIterations) {
+        performHITS(numIterations);
+    }
+
+    public Map<String, Double> getHubs() {
+        return hubs;
+    }
+
+    public Map<String, Set<String>> getLinks() {
+        return links;
+    }
+
+    public Map<String, Double> getAuthorities() {
+        return authorities;
     }
 }
