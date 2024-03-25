@@ -126,16 +126,6 @@ streams:
       type: LOCAL_OR_SHUFFLE
 
   - from: "parser"
-    to: "test"
-    grouping:
-      type: LOCAL_OR_SHUFFLE
-
-  - from: "test"
-    to: "second_test"
-    grouping:
-      type: LOCAL_OR_SHUFFLE
-      
-  - from: "parser"
     to: "hitsbolt"
     grouping:
       type: LOCAL_OR_SHUFFLE
