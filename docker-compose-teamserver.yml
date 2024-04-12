@@ -1,0 +1,103 @@
+version: "3.6"
+
+services:
+  # Apache Storm components
+  # - Zookeeper coordinates the communication between Nimbus and the Supervisors
+  zookeeper:
+    networks:
+      - frue_ra_storm_network
+    image: zookeeper:${ZOOKEEPER_VERSION:-3.6.3}
+    container_name: frue_ra_zookeeper
+    ports:
+      - 43004:43004
+    restart: always
+
+  # - the daemon Nimbus runs on the master node
+  storm-nimbus:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-nimbus
+    ## must override worker.childopts and remove options not available
+    ## for Java 11: `-XX:+PrintGCDateStamps`, etc#
+    command: storm nimbus
+        -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
+    depends_on:
+      - zookeeper
+    links:
+      - zookeeper
+    ports:
+      - 43003:43003
+    external_links:
+      - zookeeper
+    restart: always
+
+  # - the Supervisors run on the worker nodes
+  storm-supervisor:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-supervisor
+    ## must override worker.childopts and remove options not available
+    ## for Java 11: `-XX:+PrintGCDateStamps`, etc
+    command: storm supervisor
+        -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
+    depends_on:
+      - zookeeper
+      - storm-nimbus
+    links:
+      - zookeeper
+      - storm-nimbus:nimbus
+    volumes:
+      - ${INPUT:-./input}:/data/input
+      - ${LOGS:-./logs}:/logs
+      - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
+      - ./model:/data/model
+    external_links:
+      - zookeeper
+    restart: always
+    cap_add:
+      - NET_ADMIN
+
+
+  # - the Storm UI provides diagnostics about the Storm cluster
+  storm-ui:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-ui
+    command: storm ui
+    depends_on:
+      - storm-nimbus
+    links:
+      - storm-nimbus:nimbus
+    ports:
+      - 43043:43043
+    external_links:
+      - zookeeper
+    restart: always
+
+  # - to launch a topology
+  # - will exit on startup - not anymore
+  # build owler image: docker build --tag frue_ra_owler:0.1-SNAPSHOT .
+
+  owler:
+    networks:
+      - frue_ra_storm_network
+    image: frue_ra_owler:0.1-SNAPSHOT
+    container_name: frue_ra_owler
+    command: storm jar owler.jar org.apache.storm.flux.Flux topology/regular-pipeline/owler.flux --filter dev.properties
+    depends_on:
+      - storm-nimbus
+    links:
+      - storm-nimbus:nimbus
+    volumes:
+      - ${INPUT:-./input}:/data/input
+      - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
+    restart: "no"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  frue_ra_storm_network:
+    driver: bridge
