@@ -5,19 +5,19 @@ services:
   # - Zookeeper coordinates the communication between Nimbus and the Supervisors
   zookeeper:
     networks:
-      - frue_ra_storm_network
+      - storm_network
     image: zookeeper:${ZOOKEEPER_VERSION:-3.6.3}
-    container_name: frue_ra_zookeeper
+    container_name: zookeeper
     ports:
-      - 43004:43004
+      - 2181:2181
     restart: always
 
   # - the daemon Nimbus runs on the master node
   storm-nimbus:
     networks:
-      - frue_ra_storm_network
+      - storm_network
     image: storm:${STORM_VERSION:-2.4.0}
-    container_name: frue_ra_storm-nimbus
+    container_name: storm-nimbus
     ## must override worker.childopts and remove options not available
     ## for Java 11: `-XX:+PrintGCDateStamps`, etc#
     command: storm nimbus
@@ -27,7 +27,7 @@ services:
     links:
       - zookeeper
     ports:
-      - 43003:43003
+      - 6627:6627
     external_links:
       - zookeeper
     restart: always
@@ -35,9 +35,9 @@ services:
   # - the Supervisors run on the worker nodes
   storm-supervisor:
     networks:
-      - frue_ra_storm_network
+      - storm_network
     image: storm:${STORM_VERSION:-2.4.0}
-    container_name: frue_ra_storm-supervisor
+    container_name: storm-supervisor
     ## must override worker.childopts and remove options not available
     ## for Java 11: `-XX:+PrintGCDateStamps`, etc
     command: storm supervisor
@@ -63,29 +63,27 @@ services:
   # - the Storm UI provides diagnostics about the Storm cluster
   storm-ui:
     networks:
-      - frue_ra_storm_network
+      - storm_network
     image: storm:${STORM_VERSION:-2.4.0}
-    container_name: frue_ra_storm-ui
+    container_name: storm-ui
     command: storm ui
     depends_on:
       - storm-nimbus
     links:
       - storm-nimbus:nimbus
     ports:
-      - 43043:43043
+      - 8080:8080
     external_links:
       - zookeeper
     restart: always
 
   # - to launch a topology
-  # - will exit on startup - not anymore
-  # build owler image: docker build --tag frue_ra_owler:0.1-SNAPSHOT .
-
+  # - will exit on startup
   owler:
     networks:
-      - frue_ra_storm_network
-    image: frue_ra_owler:0.1-SNAPSHOT
-    container_name: frue_ra_owler
+      - storm_network
+    build: .
+    container_name: owler
     command: storm jar owler.jar org.apache.storm.flux.Flux topology/regular-pipeline/owler.flux --filter dev.properties
     depends_on:
       - storm-nimbus
@@ -99,5 +97,5 @@ services:
       - "host.docker.internal:host-gateway"
 
 networks:
-  frue_ra_storm_network:
+  storm_network:
     driver: bridge
