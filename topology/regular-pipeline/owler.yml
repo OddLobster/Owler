@@ -136,6 +136,9 @@ config:
   # with outgoing links
   # parser.emitOutlinks: false
 
+  nimbus.seeds: ["storm-nimbus"]
+
+
   awscreds:
     fs.s3a.fast.upload.buffer: "array"
     fs.s3a.multipart.size: "500M"

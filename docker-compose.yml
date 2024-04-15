@@ -1,6 +1,24 @@
 version: "3.6"
 
 services:
+  frontier:
+    networks:
+      - frue_ra_storm_network
+    build:
+      context: ../url-frontier
+      dockerfile: Dockerfile
+    environment:
+      URLFRONTIER_HOST: "0.0.0.0"
+      URLFRONTIER_PORT: "7071"
+    image: crawlercommons/url-frontier
+    container_name: frue_ra_frontier
+    hostname: frue-ra-frontier
+    ports:
+      - 7071:7071
+      - 43002:43002
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   # Apache Storm components
   # - Zookeeper coordinates the communication between Nimbus and the Supervisors
   zookeeper:
@@ -20,6 +38,7 @@ services:
     container_name: frue_ra_storm-nimbus
     ## must override worker.childopts and remove options not available
     ## for Java 11: `-XX:+PrintGCDateStamps`, etc#
+    hostname: nimbus
     command: storm nimbus
         -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
     depends_on:
@@ -31,6 +50,8 @@ services:
     external_links:
       - zookeeper
     restart: always
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   # - the Supervisors run on the worker nodes
   storm-supervisor:
@@ -58,7 +79,8 @@ services:
     restart: always
     cap_add:
       - NET_ADMIN
-
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   # - the Storm UI provides diagnostics about the Storm cluster
   storm-ui:
@@ -76,27 +98,34 @@ services:
     external_links:
       - zookeeper
     restart: always
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   # - to launch a topology
   # - will exit on startup - not anymore
   # build owler image: docker build --tag frue_ra_owler:0.1-SNAPSHOT .
 
   owler:
-    networks:
-      - frue_ra_storm_network
-    image: frue_ra_owler:0.1-SNAPSHOT
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TAG: frue_ra_owler
+    image: frue_ra_owler
     container_name: frue_ra_owler
-    command: storm jar owler.jar org.apache.storm.flux.Flux topology/regular-pipeline/owler.flux --filter dev.properties
+    command: >
+      storm jar owler.jar org.apache.storm.flux.Flux topology/regular-pipeline/owler.flux --filter dev.properties
     depends_on:
       - storm-nimbus
-    links:
-      - storm-nimbus:nimbus
+      - frontier
+    networks:
+      - frue_ra_storm_network
     volumes:
       - ${INPUT:-./input}:/data/input
       - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
     restart: "no"
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - host.docker.internal:host-gateway
 
 networks:
   frue_ra_storm_network:

@@ -23,7 +23,16 @@ COPY topology/ /crawler/topology/
 # and the dev.properties file
 COPY dev.properties /crawler/dev.properties
 
+# copy seed urls to populate urlfrontier
+COPY input/ /crawler/data/input
+
+COPY entrypoint.sh /crawler/entrypoint.sh
+RUN chmod +x /crawler/entrypoint.sh
+
 RUN chown -R "storm:storm" /crawler/
 
 USER storm
 WORKDIR /crawler/
+
+ENTRYPOINT ["./entrypoint.sh"]
+
