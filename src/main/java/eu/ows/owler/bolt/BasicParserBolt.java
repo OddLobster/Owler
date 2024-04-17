@@ -89,6 +89,8 @@ public class BasicParserBolt extends StatusEmitterBolt {
         final Metadata metadata = (Metadata) tuple.getValueByField("metadata");
 
         LOG.info("Parsing started for {}", url);
+        LOG.info("Stream name: ", com.digitalpebble.stormcrawler.Constants.StatusStreamName);
+        LOG.info("Stream name: ", StatusStreamName);
 
         final long start = System.currentTimeMillis();
 

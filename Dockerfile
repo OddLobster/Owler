@@ -24,7 +24,7 @@ COPY topology/ /crawler/topology/
 COPY dev.properties /crawler/dev.properties
 
 # copy seed urls to populate urlfrontier
-COPY input/ /crawler/data/input
+COPY seeds.txt /crawler/data/input
 
 COPY entrypoint.sh /crawler/entrypoint.sh
 RUN chmod +x /crawler/entrypoint.sh
