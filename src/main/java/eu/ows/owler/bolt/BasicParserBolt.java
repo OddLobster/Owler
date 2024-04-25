@@ -112,6 +112,7 @@ public class BasicParserBolt extends StatusEmitterBolt {
         try {
             final String html =
                     Charset.forName(charset).decode(ByteBuffer.wrap(content)).toString();
+            LOG.info("PARSERBOLT html: ", html);
             jsoupDoc = Parser.htmlParser().parseInput(html, url);
 
             if (!robotsMetaSkip) {
@@ -193,7 +194,7 @@ public class BasicParserBolt extends StatusEmitterBolt {
         metadata.setValue("parsed.by", this.getClass().getName());
 
         long duration = System.currentTimeMillis() - start;
-
+        collector.emit("embedding", tuple, new Values(url, content, metadata));
         LOG.info("Parsed {} in {} msec", url, duration);
 
         if (!ignoreMetaRedirections) {
@@ -257,7 +258,6 @@ public class BasicParserBolt extends StatusEmitterBolt {
                                 outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
             }
         }
-        collector.emit("hits", tuple, new Values(url, outlinks));
 
         // emit each document/subdocument in the ParseResult object
         // there should be at least one ParseData item for the "parent" URL
@@ -298,7 +298,8 @@ public class BasicParserBolt extends StatusEmitterBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
         declarer.declare(new Fields("url", "content", "metadata", "text"));
-        declarer.declareStream("hits", new Fields("url", "child_urls"));
+        declarer.declareStream("embedding", new Fields("url", "content", "metadata"));
+
     }
 
     protected List<Outlink> toOutlinks(

@@ -123,6 +123,7 @@ streams:
     to: "embeddingbolt"
     grouping:
       type: LOCAL_OR_SHUFFLE
+      streamId: "embedding"
 
   - from: "parser"
     to: "shunt"

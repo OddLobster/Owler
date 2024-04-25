@@ -356,6 +356,18 @@
 			<artifactId>nd4j-onnxruntime</artifactId>
 			<version>1.0.0-M2.1</version>
 		</dependency>
-		
-	</dependencies>
+
+		<dependency>
+			<groupId>de.l3s.boilerpipe</groupId>
+			<artifactId>boilerpipe</artifactId>
+			<version>1.1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sourceforge.nekohtml</groupId>
+			<artifactId>nekohtml</artifactId>
+			<version>1.9.22</version>
+		</dependency>
+	
+ </dependencies>
 </project>
