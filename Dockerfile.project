@@ -1,0 +1,53 @@
+FROM maven:3.8.6-openjdk-11 AS builder
+
+RUN apt-get update -qq && \
+    apt-get install -yq --no-install-recommends \
+        curl \
+        jq \
+        less \
+        vim
+
+WORKDIR /localdata1/frue_ra
+VOLUME /localdata1/frue_ra/.m2
+
+COPY pom.xml .
+
+
+RUN mvn -Dmaven.repo.local=/localdata1/frue_ra/.m2 dependency:go-offline
+
+COPY src/ src/
+COPY topology/ topology/
+COPY dev.properties .
+COPY entrypoint.sh .
+
+RUN ls -a
+
+RUN realpath src/main/resources/bert/bert-base-uncased.onnx
+
+# RUN mvn com.cosium.code:git-code-format-maven-plugin:4.2:format-code
+
+RUN mvn -Dmaven.repo.local=/localdata1/frue_ra/.m2 install -DskipTests -T 24 -Dformat.skip=true
+
+# Create a new stage for the final image
+FROM storm:${STORM_VERSION:-2.4.0}
+
+# Copy the built JAR file and other necessary files
+COPY --from=builder /localdata1/frue_ra/target/owler-0.1-SNAPSHOT.jar ./owler.jar
+COPY --from=builder /localdata1/frue_ra/topology ./topology/
+COPY --from=builder /localdata1/frue_ra/dev.properties ./dev.properties
+COPY --from=builder /localdata1/frue_ra/entrypoint.sh ./entrypoint.sh
+COPY --from=builder /localdata1/frue_ra/data/model/bert-base-uncased.onnx ./bert-base-uncased.onnx
+COPY seeds.txt .
+
+RUN ls -la
+RUN realpath bert-base-uncased.onnx
+RUN pwd
+
+
+RUN chmod +x ./entrypoint.sh
+
+RUN chown -R "storm:storm" .
+
+USER storm
+
+ENTRYPOINT ["./entrypoint.sh"]

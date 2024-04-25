@@ -72,8 +72,8 @@ bolts:
   - id: "parser"
     className: "eu.ows.owler.bolt.BasicParserBolt"
     parallelism: 4
-  - id: "embeddingbolt"
-    className: "eu.ows.owler.bolt.EmbeddingBolt"
+  - id: "hitsbolt"
+    className: "eu.ows.owler.bolt.HITSBolt"
     parallelism: 1
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
@@ -120,7 +120,13 @@ streams:
       type: LOCAL_OR_SHUFFLE
 
   - from: "parser"
-    to: "embeddingbolt"
+    to: "hitsbolt"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+      streamId: "hits"
+
+  - from: "parser"
+    to: "warc"
     grouping:
       type: LOCAL_OR_SHUFFLE
 

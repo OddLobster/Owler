@@ -27,12 +27,21 @@
 	</properties>
 
 	<build>
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.extensions</groupId>
+				<artifactId>maven-build-cache-extension</artifactId>
+				<version>1.1.0</version>
+			</extension>
+		</extensions>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.10.1</version>
 				<configuration>
+					<fork>true</fork>
+					<parallel>true</parallel>
 					<source>11</source>
 					<target>11</target>
 				</configuration>
@@ -56,6 +65,8 @@
 					<classpathScope>compile</classpathScope>
 				</configuration>
 			</plugin>
+
+
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -122,6 +133,17 @@
 					</execution>
 				</executions>
 			</plugin>
+
+			<plugin>
+				<groupId>com.cosium.code</groupId>
+				<artifactId>git-code-format-maven-plugin</artifactId>
+				<version>4.2</version>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+
+
 		</plugins>
 	</build>
 
@@ -168,7 +190,6 @@
         	<artifactId>httpclient</artifactId>
         	<version>4.5</version>
     	</dependency>
-
 
 		<dependency>
 			<groupId>com.digitalpebble.stormcrawler</groupId>
@@ -313,5 +334,28 @@
 			<version>2.7.3</version>
 		</dependency>
 
+
+		<dependency>
+			<groupId>org.deeplearning4j</groupId>
+			<artifactId>deeplearning4j-core</artifactId>
+			<version>1.0.0-M2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.nd4j</groupId>
+			<artifactId>nd4j-native-platform</artifactId>
+			<version>1.0.0-M2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.deeplearning4j</groupId>
+			<artifactId>deeplearning4j-nlp</artifactId>
+			<version>1.0.0-M2.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.nd4j</groupId>
+			<artifactId>nd4j-onnxruntime</artifactId>
+			<version>1.0.0-M2.1</version>
+		</dependency>
+		
 	</dependencies>
 </project>

@@ -5,7 +5,7 @@ services:
     networks:
       - frue_ra_storm_network
     build:
-      context: ../url-frontier
+      context: ../url-frontier/
       dockerfile: Dockerfile
     environment:
       URLFRONTIER_HOST: "0.0.0.0"
@@ -74,6 +74,7 @@ services:
       - ${LOGS:-./logs}:/logs
       - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
       - ./model:/data/model
+      - ./data/model:/bert/model
     external_links:
       - zookeeper
     restart: always
@@ -108,13 +109,10 @@ services:
   owler:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.owler
       args:
         TAG: frue_ra_owler
-    image: frue_ra_owler
     container_name: frue_ra_owler
-    command: >
-      storm jar owler.jar org.apache.storm.flux.Flux topology/regular-pipeline/owler.flux --filter dev.properties
     depends_on:
       - storm-nimbus
       - frontier
@@ -123,6 +121,7 @@ services:
     volumes:
       - ${INPUT:-./input}:/data/input
       - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
+      - maven-repo:/localdata1/frue_ra/.m2
     restart: "no"
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -130,3 +129,6 @@ services:
 networks:
   frue_ra_storm_network:
     driver: bridge
+
+volumes:
+  maven-repo:

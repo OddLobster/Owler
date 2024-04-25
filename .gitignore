@@ -43,3 +43,4 @@ input/
 .env
 logs/
 /.idea/uiDesigner.xml
+data/

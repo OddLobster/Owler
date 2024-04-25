@@ -26,6 +26,10 @@ COPY dev.properties /crawler/dev.properties
 # copy seed urls to populate urlfrontier
 COPY seeds.txt /crawler/data/input
 
+COPY seeds.txt /crawler/
+
+
+
 COPY entrypoint.sh /crawler/entrypoint.sh
 RUN chmod +x /crawler/entrypoint.sh
 
