@@ -87,10 +87,8 @@ public class BasicParserBolt extends StatusEmitterBolt {
         final byte[] content = tuple.getBinaryByField("content");
         final String url = tuple.getStringByField("url");
         final Metadata metadata = (Metadata) tuple.getValueByField("metadata");
-
+        LOG.info("URL FROM PARSERBOLT: {}", url);
         LOG.info("Parsing started for {}", url);
-        LOG.info("Stream name: ", com.digitalpebble.stormcrawler.Constants.StatusStreamName);
-        LOG.info("Stream name: ", StatusStreamName);
 
         final long start = System.currentTimeMillis();
 
@@ -194,8 +192,9 @@ public class BasicParserBolt extends StatusEmitterBolt {
         metadata.setValue("parsed.by", this.getClass().getName());
 
         long duration = System.currentTimeMillis() - start;
-        collector.emit("embedding", tuple, new Values(url, content, metadata));
+        collector.emit("segment", tuple, new Values(url, content, metadata));
         LOG.info("Parsed {} in {} msec", url, duration);
+        LOG.info("MetaData:", metadata.toString());
 
         if (!ignoreMetaRedirections) {
             try {
@@ -298,7 +297,7 @@ public class BasicParserBolt extends StatusEmitterBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
         declarer.declare(new Fields("url", "content", "metadata", "text"));
-        declarer.declareStream("embedding", new Fields("url", "content", "metadata"));
+        declarer.declareStream("segment", new Fields("url", "content", "metadata"));
 
     }
 

@@ -8,7 +8,10 @@ import java.nio.file.Paths;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -32,6 +35,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.onnxruntime.runner.OnnxRuntimeRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import de.l3s.boilerpipe.document.TextBlock;
 
 import de.l3s.boilerpipe.extractors.DefaultExtractor;
 import de.l3s.boilerpipe.extractors.ArticleExtractor;
@@ -47,7 +51,6 @@ public class EmbeddingBolt extends BaseRichBolt {
     private OnnxRuntimeRunner runner;
     private Map<String, Integer> vocabulary;
     private int max_embedding_length = 512;
-
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -98,6 +101,19 @@ public class EmbeddingBolt extends BaseRichBolt {
         return tokenized_text;
     }
 
+    private static void writeEmbeddingToFile(INDArray embedding, String fileName) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < embedding.length(); i++) {
+                sb.append(embedding.getDouble(i)).append(" ");
+            }
+            writer.println(sb.toString().trim());
+        } catch (IOException e) {
+            LOG.info("Failed to write embedding to file {}", e);
+            e.printStackTrace();
+        }
+    }
+
     private INDArray createAttentionMask(INDArray tokens)
     {
         INDArray attention_mask = Nd4j.create(1, tokens.length());
@@ -122,60 +138,33 @@ public class EmbeddingBolt extends BaseRichBolt {
         byte[] content = input.getBinaryByField("content");
         final Metadata metadata = (Metadata) input.getValueByField("metadata");
 
+        @SuppressWarnings("unchecked")
+        List<TextBlock> blocks = (List<TextBlock>) input.getValueByField("blocks");
 
-        String charset = CharsetIdentification.getCharset(metadata, content, -1);
-        Document jsoupDoc;
-        String html = Charset.forName(charset).decode(ByteBuffer.wrap(content)).toString();
-        LOG.info("HTML string: ", html);
-        jsoupDoc = Parser.htmlParser().parseInput(html, url);
-        String jsoupText = jsoupDoc.text();
+
+        LOG.info("Called EmbeddingBolt for {}", url);
+        LOG.info("Blocks to process: {}", blocks.size());
+        List<INDArray> blockEmbeddings = new ArrayList<>();
         String text;
-        try {
-            HTMLDocument htmlDoc = new HTMLDocument(html.getBytes(), Charset.forName(charset));
-            text = DefaultExtractor.INSTANCE.getText(html);
-        } catch (Exception e)
+        for (int i = 0; i < blocks.size(); i++)
         {
-            LOG.info("Boilerpipe failed to parse file");
-            text = "";
+            text = blocks.get(i).getText();
+            text = "This is an example web text";
+            INDArray tokenized_text = tokenizeText(text, max_embedding_length);
+            tokenized_text = tokenized_text.castTo(DataType.INT64);
+            INDArray attention_mask = createAttentionMask(tokenized_text);
+            
+            Map<String, INDArray> inputs = new LinkedHashMap<>();
+            inputs.put("input_ids", tokenized_text);
+            inputs.put("attention_mask", attention_mask);
+            
+            Map<String, INDArray> output = this.runner.exec(inputs);
+            INDArray value = output.get("output");
+            INDArray embedding = value.mean(1);
+            writeEmbeddingToFile(embedding, "/outdata/dummy_embedding_"+i+".txt");
+            blockEmbeddings.add(embedding);
         }
-
-
-        LOG.info("Called EmbeddingBolt");
-        LOG.info("Boilerpipe Text: ", text);
-        LOG.info("Jsoup Text: ", jsoupText);
-
-
-        text = "This is an example web text";
-        INDArray tokenized_text = tokenizeText(text, max_embedding_length);
-        tokenized_text = tokenized_text.castTo(DataType.INT64);
-        INDArray attention_mask = createAttentionMask(tokenized_text);
-
-        String test = "@@@tokenized_text: " + tokenized_text;
-        LOG.info(test);
-        String test1 = "###attention_mask: " + attention_mask;
-        LOG.info(test1);
-
-        Map<String, INDArray> inputs = new LinkedHashMap<>();
-        inputs.put("input_ids", tokenized_text);
-        inputs.put("attention_mask", attention_mask);
-
-        Map<String, INDArray> output = this.runner.exec(inputs);
-
-        for (Map.Entry<String, INDArray> entry : output.entrySet()) {
-            String key = entry.getKey();
-            INDArray value = entry.getValue();
-            LOG.info("out Key: ", key);
-            LOG.info("out Value: ", value);
-            if (key == "output")
-            {
-                LOG.info("BERT Output: ", value);
-                INDArray embedding = value.mean(1);
-                LOG.info("Text embedding: ", embedding);
-            }
-        }
-
-
-
+            
         long endTime = System.currentTimeMillis();
         LOG.info("Embedding took: " + (endTime - startTime) + " ms");
         // this.collector.emit(input, new Values(url, content, metadata, text));
