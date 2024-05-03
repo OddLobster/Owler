@@ -1,5 +1,8 @@
 FROM storm:${STORM_VERSION:-2.4.0}
 
+ARG USER_ID
+ARG GROUP_ID
+
 RUN apt-get update -qq && \
 	apt-get install -yq --no-install-recommends \
 		curl \
@@ -33,9 +36,14 @@ COPY seeds.txt /crawler/
 COPY entrypoint.sh /crawler/entrypoint.sh
 RUN chmod +x /crawler/entrypoint.sh
 
+# RUN useradd -m -u $USER_ID -g storm frue_ra  && \
+#     chown -R storm:storm /crawler/
+
 RUN chown -R "storm:storm" /crawler/
 
 USER storm
+
+
 WORKDIR /crawler/
 
 ENTRYPOINT ["./entrypoint.sh"]

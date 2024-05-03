@@ -44,6 +44,11 @@
 					<parallel>true</parallel>
 					<source>11</source>
 					<target>11</target>
+					<excludes>
+						<exclude>
+							**/EmbeddingBolt.java
+						</exclude>
+					</excludes>
 				</configuration>
 			</plugin>
 
@@ -65,8 +70,6 @@
 					<classpathScope>compile</classpathScope>
 				</configuration>
 			</plugin>
-
-
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -334,29 +337,6 @@
 			<version>2.7.3</version>
 		</dependency>
 
-
-		<dependency>
-			<groupId>org.deeplearning4j</groupId>
-			<artifactId>deeplearning4j-core</artifactId>
-			<version>1.0.0-M2.1</version>
-		</dependency>
-		<dependency>
-			<groupId>org.nd4j</groupId>
-			<artifactId>nd4j-native-platform</artifactId>
-			<version>1.0.0-M2.1</version>
-		</dependency>
-		<dependency>
-			<groupId>org.deeplearning4j</groupId>
-			<artifactId>deeplearning4j-nlp</artifactId>
-			<version>1.0.0-M2.1</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.nd4j</groupId>
-			<artifactId>nd4j-onnxruntime</artifactId>
-			<version>1.0.0-M2.1</version>
-		</dependency>
-
 		<dependency>
 			<groupId>de.l3s.boilerpipe</groupId>
 			<artifactId>boilerpipe</artifactId>
@@ -368,12 +348,12 @@
 			<artifactId>nekohtml</artifactId>
 			<version>1.9.22</version>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>net.sf.py4j</groupId>
 			<artifactId>py4j</artifactId>
 			<version>0.10.9.7</version>
 		</dependency>
-	
+
  </dependencies>
 </project>

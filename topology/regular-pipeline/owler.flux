@@ -70,10 +70,13 @@ bolts:
     className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
     parallelism: 1
   - id: "parser"
-    className: "eu.ows.owler.bolt.BasicParserBolt"
+    className: "eu.ows.owler.bolt.OWSParserBolt"
     parallelism: 4
-  - id: "embeddingbolt"
-    className: "eu.ows.owler.bolt.EmbeddingBolt"
+  - id: "segmenter"
+    className: "eu.ows.owler.bolt.PageSegmentBolt"
+    parallelism: 1
+  - id: "embedder"
+    className: "eu.ows.owler.bolt.DummyEmbeddingBolt"
     parallelism: 1
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
@@ -120,18 +123,18 @@ streams:
       type: LOCAL_OR_SHUFFLE
 
   - from: "parser"
-    to: "embeddingbolt"
+    to: "segmenter"
     grouping:
       type: LOCAL_OR_SHUFFLE
-      streamId: "embedding"
+      streamId: "segment"
+
+  - from: "segmenter"
+    to: "embedder"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
 
   - from: "parser"
     to: "shunt"
-    grouping:
-      type: LOCAL_OR_SHUFFLE
-
-  - from: "shunt"
-    to: "index"
     grouping:
       type: LOCAL_OR_SHUFFLE
 
@@ -142,6 +145,11 @@ streams:
       streamId: "tika"
 
   - from: "tika"
+    to: "segmenter"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+
+  - from: "embedder"
     to: "index"
     grouping:
       type: LOCAL_OR_SHUFFLE

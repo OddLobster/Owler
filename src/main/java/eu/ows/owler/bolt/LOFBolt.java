@@ -1,35 +1,54 @@
 package eu.ows.owler.bolt;
-import py4j.GatewayServer;
-import eu.ows.owler.bolt.LOFInterface;
 
-import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
-public class LOFBolt {
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Tuple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import eu.ows.owler.bolt.LOFBridge;
 
+import com.digitalpebble.stormcrawler.Metadata;
+import com.digitalpebble.stormcrawler.util.CharsetIdentification;
 
-    public byte[] getByteArray(double[] embedding) {
-        ByteBuffer buffer = ByteBuffer.allocate(Double.BYTES * embedding.length);
-        for (int i = 0; i < embedding.length; i++) {
-            buffer.putDouble(embedding[i]);
-        }
-        return buffer.array();
+public class LOFBolt extends BaseRichBolt {
+    private OutputCollector collector;
+    private static final Logger LOG = LoggerFactory.getLogger(LOFBolt.class);
+    private Map<String, Integer> vocabulary;
+    private List<double[]> embeddings;
+    private LOFBridge lofModel;
+
+    @Override
+    public void declareOutputFields(OutputFieldsDeclarer declarer) {
+        declarer.declare(new Fields("url", "content", "metadata", "text"));
     }
 
-    public static void main(String[] args) {
-        try {
-            GatewayServer gateway = new GatewayServer();
-            gateway.start();
-            LOFInterface lof = (LOFInterface) gateway.getPythonServerEntryPoint(new Class[] {LOFInterface.class});
-            // byte[] modelInput = getByteArray(new double[]{-0.2354707270860672, 0.25799551606178284, -0.1670743227005005, -0.012231017462909222, 0.16397954523563385, 0.2882660925388336});
-            double[] embedding = new double[]{-0.2354707270860672, 0.25799551606178284, -0.1670743227005005, -0.012231017462909222, 0.16397954523563385, 0.2882660925388336};
-            ByteBuffer buffer = ByteBuffer.allocate(Double.BYTES * embedding.length);
-            for (int i = 0; i < embedding.length; i++) {
-                buffer.putDouble(embedding[i]);
-            }
-            String prediction = lof.predict(buffer.array());
-            System.out.println("JAVA: " +prediction);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    @Override
+    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+        this.collector = collector;
+        this.lofModel = new LOFBridge();
+    }
+
+    @Override
+    public void execute(Tuple input) {
+        long startTime = System.currentTimeMillis();
+        
+
+        long endTime = System.currentTimeMillis();
+        LOG.info("Time: {}", endTime-startTime);
+
+        collector.ack(input);
     }
 }

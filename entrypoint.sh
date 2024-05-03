@@ -8,7 +8,6 @@ java -cp owler.jar crawlercommons.urlfrontier.client.Client --host="frue-ra-fron
 sleep 10
 java -cp owler.jar crawlercommons.urlfrontier.client.Client --host="frue-ra-frontier" PutURLs -f seeds.txt
 
-
 while true; do
   sleep 60
 done

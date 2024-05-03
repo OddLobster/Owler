@@ -75,6 +75,7 @@ services:
       - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
       - ./model:/data/model
       - ./data/model:/bert/model
+      - ${OUTPUT:-./output}:/outdata
     external_links:
       - zookeeper
     restart: always
@@ -112,6 +113,7 @@ services:
       dockerfile: Dockerfile.owler
       args:
         TAG: frue_ra_owler
+    user: "${MY_UID}:${MY_GID}"
     container_name: frue_ra_owler
     depends_on:
       - storm-nimbus
@@ -122,6 +124,8 @@ services:
       - ${INPUT:-./input}:/data/input
       - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
       - maven-repo:/localdata1/frue_ra/.m2
+      - ./logs:/loginternal
+      - ${OUTPUT:-./output}:/outdata
     restart: "no"
     extra_hosts:
       - host.docker.internal:host-gateway
