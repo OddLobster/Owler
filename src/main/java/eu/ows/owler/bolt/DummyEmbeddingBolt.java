@@ -19,11 +19,10 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.jsoup.nodes.Document;
 import org.jsoup.parser.Parser;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Random;
+import org.apache.storm.tuple.Values;
 
 import de.l3s.boilerpipe.document.TextBlock;
 import de.l3s.boilerpipe.extractors.DefaultExtractor;
@@ -37,16 +36,17 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
     private static final Logger LOG = LoggerFactory.getLogger(DummyEmbeddingBolt.class);
     private Map<String, Integer> vocabulary;
     private List<double[]> embeddings;
+    private Random rand;
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "content", "metadata", "text"));
+        declarer.declare(new Fields("url", "content", "metadata", "embedding"));
     }
 
     private static List<double[]> readEmbeddings(int numEmbeddings) {
         Map<Integer, double[]> embeddings = new LinkedHashMap<>();
         for (int i = 0; i < numEmbeddings; i++) {
-            try (BufferedReader reader = new BufferedReader(new FileReader("/outdata/embedding_" + i + ".txt"))) {
+            try (BufferedReader reader = new BufferedReader(new FileReader("/outdata/dummy_embedding_" + i + ".txt"))) {
                 String line = reader.readLine();
                 if (line != null) {
                     String[] values = line.split(" ");
@@ -83,6 +83,7 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
             e.printStackTrace();
         }
         this.embeddings = readEmbeddings(45);
+        this.rand = new Random();
     }
 
     @Override
@@ -97,20 +98,17 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
 
         LOG.info("Called EmbeddingBolt for {}", url);
         LOG.info("Blocks to process: {}", blocks.size());
-        Random rand = new Random();
-        int index = rand.nextInt(this.embeddings.size());
+        int index = this.rand.nextInt(this.embeddings.size());
         double[] randomEmbedding = this.embeddings.get(index);
         for(int i = 0; i < blocks.size(); i++)
         {
-            rand = new Random();
-            index = rand.nextInt(this.embeddings.size());
+            index = this.rand.nextInt(this.embeddings.size());
             randomEmbedding = this.embeddings.get(index);
         }
-        LOG.info("Final embedding: {}", randomEmbedding);
 
         long endTime = System.currentTimeMillis();
         LOG.info("Time: {}", endTime-startTime);
-
+        collector.emit(input, new Values(url, content, metadata, randomEmbedding));
         collector.ack(input);
     }
 }

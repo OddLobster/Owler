@@ -78,6 +78,9 @@ bolts:
   - id: "embedder"
     className: "eu.ows.owler.bolt.DummyEmbeddingBolt"
     parallelism: 1
+  - id: "classifier"
+    className: "eu.ows.owler.bolt.LOFBolt"
+    parallelism: 1
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
     parallelism: 1
@@ -130,6 +133,11 @@ streams:
 
   - from: "segmenter"
     to: "embedder"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+
+  - from: "embedder"
+    to: "classifier"
     grouping:
       type: LOCAL_OR_SHUFFLE
 

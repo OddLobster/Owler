@@ -12,31 +12,39 @@ def get_bert_embeddings(embedding_file=None):
         embeddings = np.array(embeddings).squeeze(1)
     return embeddings
 
-
 class LOF:
     def __init__(self) -> None:
         self.lof_model = LocalOutlierFactor(n_neighbors=4, novelty=True)
-        self.corpus_embedding = get_bert_embeddings("../OwlerUtil/Embedding/data/corpus_embedding_d_0_rp.hdf5")
+        self.corpus_embedding = get_bert_embeddings("data/corpus_embedding.hdf5")
         self.lof_model.fit(self.corpus_embedding)
         print("Finished init LOF")
 
     def predict(self, document_embedding):
         document_embedding = np.frombuffer(document_embedding, dtype=np.float64)
         #prediction = self.lof_model.predict([document_embedding])[0]
+        print("Done predicting")
         prediction = "-1"
         return str(prediction)
     
     class Java:
-        implements = ["eu.ows.owler.bolt"]
+        implements = ["eu.ows.owler.bolt.LOFInterface"]
 
 
 def main():
     print("Starting gateway")
     port = launch_gateway()
+
     gateway = JavaGateway(
-        gateway_parameters=GatewayParameters(port=port),
-        callback_server_parameters=CallbackServerParameters(),
+        gateway_parameters=GatewayParameters(address="0.0.0.0", port=43044),
+        callback_server_parameters=CallbackServerParameters(address="0.0.0.0"),
         python_server_entry_point=LOF())
+    python_port = gateway.get_callback_server().get_listening_port()
+    print("Port: ", python_port)
+    print("Address: ",gateway.get_callback_server().get_listening_address())
+    # gateway.java_gateway_server.resetCallbackClient(
+    #     gateway.java_gateway_server.getCallbackClient().getAddress(),
+    #     python_port)
+    gateway.start_callback_server()
 
 if __name__ == "__main__":
     main()

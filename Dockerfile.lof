@@ -1,0 +1,12 @@
+FROM python:3.8
+
+WORKDIR /app
+
+COPY lof_api.py /app
+COPY data/model/corpus_embedding_d_0_rp.hdf5 /app/data/model/corpus_embedding_d_0_rp.hdf5
+
+RUN pip install scikit-learn numpy h5py flask
+
+EXPOSE 43044
+
+CMD ["python3", "lof_api.py"]

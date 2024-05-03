@@ -118,6 +118,7 @@ services:
     depends_on:
       - storm-nimbus
       - frontier
+      - lof-service
     networks:
       - frue_ra_storm_network
     volumes:
@@ -129,6 +130,18 @@ services:
     restart: "no"
     extra_hosts:
       - host.docker.internal:host-gateway
+
+  lof-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.lof
+    container_name: frue_ra_lof
+    networks:
+      - frue_ra_storm_network
+    ports:
+      - 43044:43044
+
+
 
 networks:
   frue_ra_storm_network:

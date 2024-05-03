@@ -17,7 +17,7 @@ build:
 	mvn clean install
 
 exec:
-	MY_UID=$$(id -u) MY_GID=$$(id -g) docker-compose -f docker-compose.yml up -d --build --renew-anon-volumes
+	MY_UID=$$(id -u) MY_GID=$$(id -g) docker-compose -f docker-compose.yml up -d --build --renew-anon-volumes 
 
 format:
 	mvn com.cosium.code:git-code-format-maven-plugin:4.2:format-code

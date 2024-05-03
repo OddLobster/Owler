@@ -149,7 +149,6 @@ public class EmbeddingBolt extends BaseRichBolt {
         for (int i = 0; i < blocks.size(); i++)
         {
             text = blocks.get(i).getText();
-            text = "This is an example web text";
             INDArray tokenized_text = tokenizeText(text, max_embedding_length);
             tokenized_text = tokenized_text.castTo(DataType.INT64);
             INDArray attention_mask = createAttentionMask(tokenized_text);
