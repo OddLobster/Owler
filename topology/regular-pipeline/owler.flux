@@ -76,8 +76,8 @@ bolts:
     className: "eu.ows.owler.bolt.PageSegmentBolt"
     parallelism: 1
   - id: "embedder"
-    className: "eu.ows.owler.bolt.DummyEmbeddingBolt"
-    parallelism: 1
+    className: "eu.ows.owler.bolt.EmbeddingBolt"
+    parallelism: 8
   - id: "classifier"
     className: "eu.ows.owler.bolt.LOFBolt"
     parallelism: 1

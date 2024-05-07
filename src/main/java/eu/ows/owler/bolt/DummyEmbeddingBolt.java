@@ -40,13 +40,13 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "content", "metadata", "embedding"));
+        declarer.declare(new Fields("url", "content", "metadata", "pageEmbedding", "pageBlockEmbeddings", "pageTextBlocks", "blockLinks"));
     }
 
     private static List<double[]> readEmbeddings(int numEmbeddings) {
         Map<Integer, double[]> embeddings = new LinkedHashMap<>();
         for (int i = 0; i < numEmbeddings; i++) {
-            try (BufferedReader reader = new BufferedReader(new FileReader("/outdata/dummy_embedding_" + i + ".txt"))) {
+            try (BufferedReader reader = new BufferedReader(new FileReader("/outdata/embeddings/dummy_embedding_" + i + ".txt"))) {
                 String line = reader.readLine();
                 if (line != null) {
                     String[] values = line.split(" ");
@@ -82,7 +82,7 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
         } catch (NumberFormatException | IOException e) {
             e.printStackTrace();
         }
-        this.embeddings = readEmbeddings(45);
+        this.embeddings = readEmbeddings(300);
         this.rand = new Random();
     }
 
@@ -94,21 +94,28 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
         final Metadata metadata = (Metadata) input.getValueByField("metadata");
 
         @SuppressWarnings("unchecked")
+        List<List<String>> blockLinks = (List<List<String>>) input.getValueByField("blockLinks");
+
+        @SuppressWarnings("unchecked")
         List<TextBlock> blocks = (List<TextBlock>) input.getValueByField("blocks");
 
         LOG.info("Called EmbeddingBolt for {}", url);
         LOG.info("Blocks to process: {}", blocks.size());
         int index = this.rand.nextInt(this.embeddings.size());
         double[] randomEmbedding = this.embeddings.get(index);
+        List<double[]> embeddings = new ArrayList<>();
+        List<String> pageBlockTexts = new ArrayList<>();
         for(int i = 0; i < blocks.size(); i++)
         {
             index = this.rand.nextInt(this.embeddings.size());
             randomEmbedding = this.embeddings.get(index);
+            embeddings.add(randomEmbedding);
+            pageBlockTexts.add("This is dummy text");
         }
 
         long endTime = System.currentTimeMillis();
-        LOG.info("Time: {}", endTime-startTime);
-        collector.emit(input, new Values(url, content, metadata, randomEmbedding));
+        LOG.info("Emitted all blocks in: {} ms", endTime-startTime);
+        collector.emit(input, new Values(url, content, metadata, randomEmbedding, embeddings, pageBlockTexts, blockLinks));
         collector.ack(input);
     }
 }

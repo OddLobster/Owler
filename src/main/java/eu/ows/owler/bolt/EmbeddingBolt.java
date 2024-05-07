@@ -23,6 +23,7 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
 import org.bytedeco.dnnl.memory.data_type;
 import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
@@ -54,7 +55,7 @@ public class EmbeddingBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "content", "metadata", "text"));
+        declarer.declare(new Fields("url", "content", "metadata", "pageEmbedding", "pageBlockEmbeddings", "pageTextBlocks", "blockLinks"));
     }
 
     @Override
@@ -137,18 +138,23 @@ public class EmbeddingBolt extends BaseRichBolt {
         String url = input.getStringByField("url");
         byte[] content = input.getBinaryByField("content");
         final Metadata metadata = (Metadata) input.getValueByField("metadata");
+        String pageText = input.getStringByField("wholeText");
+
+        @SuppressWarnings("unchecked")
+        List<List<String>> blockLinks = (List<List<String>>) input.getValueByField("blockLinks");
 
         @SuppressWarnings("unchecked")
         List<TextBlock> blocks = (List<TextBlock>) input.getValueByField("blocks");
 
 
         LOG.info("Called EmbeddingBolt for {}", url);
-        LOG.info("Blocks to process: {}", blocks.size());
-        List<INDArray> blockEmbeddings = new ArrayList<>();
-        String text;
+        List<double[]> blockEmbeddings = new ArrayList<>();
+        List<String> pageBlockTexts = new ArrayList<>();
+        
+        // create embedding for each block
         for (int i = 0; i < blocks.size(); i++)
         {
-            text = blocks.get(i).getText();
+            String text = blocks.get(i).getText();
             INDArray tokenized_text = tokenizeText(text, max_embedding_length);
             tokenized_text = tokenized_text.castTo(DataType.INT64);
             INDArray attention_mask = createAttentionMask(tokenized_text);
@@ -159,14 +165,32 @@ public class EmbeddingBolt extends BaseRichBolt {
             
             Map<String, INDArray> output = this.runner.exec(inputs);
             INDArray value = output.get("output");
-            INDArray embedding = value.mean(1);
-            writeEmbeddingToFile(embedding, "/outdata/dummy_embedding_"+i+".txt");
+            INDArray meanEmbedding = value.mean(1);
+            double[] embedding = meanEmbedding.data().asDouble();
+            // writeEmbeddingToFile(embedding, "/outdata/dummy_embedding_"+i+".txt");
+            pageBlockTexts.add(text);
             blockEmbeddings.add(embedding);
         }
-            
+
+        // create embedding for whole web page
+        INDArray tokenized_text = tokenizeText(pageText, max_embedding_length);
+        tokenized_text = tokenized_text.castTo(DataType.INT64);
+        INDArray attention_mask = createAttentionMask(tokenized_text);
+        
+        Map<String, INDArray> inputs = new LinkedHashMap<>();
+        inputs.put("input_ids", tokenized_text);
+        inputs.put("attention_mask", attention_mask);
+        
+        Map<String, INDArray> output = this.runner.exec(inputs);
+        INDArray value = output.get("output");
+        INDArray meanEmbedding = value.mean(1);
+        double[] pageTextEmbedding = meanEmbedding.data().asDouble();
+        
         long endTime = System.currentTimeMillis();
         LOG.info("Embedding took: " + (endTime - startTime) + " ms");
-        // this.collector.emit(input, new Values(url, content, metadata, text));
+        LOG.info("Blocks to process: {}", blocks.size());
+
+        collector.emit(input, new Values(url, content, metadata, pageTextEmbedding, blockEmbeddings, pageBlockTexts, blockLinks));
         collector.ack(input);
     }
 }

@@ -15,7 +15,7 @@ def get_bert_embeddings(embedding_file=None):
 
 class LOF:
     def __init__(self):
-        self.lof_model = LocalOutlierFactor(n_neighbors=12, novelty=True)
+        self.lof_model = LocalOutlierFactor(n_neighbors=8, novelty=True)
         self.corpus_embedding = get_bert_embeddings("data/model/corpus_embedding_d_0_rp.hdf5")
         self.lof_model.fit(self.corpus_embedding)
         print("Finished init LOF")

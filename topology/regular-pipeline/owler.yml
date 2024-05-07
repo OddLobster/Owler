@@ -134,7 +134,7 @@ config:
 
   # do not emit outlinks to avoid flooding the status index
   # with outgoing links
-  parser.emitOutlinks: false
+  # parser.emitOutlinks: false
 
   nimbus.seeds: ["storm-nimbus"]
 
