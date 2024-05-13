@@ -77,10 +77,10 @@ bolts:
     parallelism: 1
   - id: "embedder"
     className: "eu.ows.owler.bolt.EmbeddingBolt"
-    parallelism: 8
+    parallelism: 4
   - id: "classifier"
     className: "eu.ows.owler.bolt.LOFBolt"
-    parallelism: 1
+    parallelism: 4
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
     parallelism: 1

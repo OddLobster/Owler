@@ -45,6 +45,9 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.net.URL;
 
+import eu.ows.owler.util.PageData;
+
+
 public class PageSegmentBolt extends BaseRichBolt {
     private OutputCollector collector;
     private static final Logger LOG = LoggerFactory.getLogger(PageSegmentBolt.class);
@@ -52,7 +55,7 @@ public class PageSegmentBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "content", "metadata", "blocks", "blockLinks", "wholeText"));
+        declarer.declare(new Fields("url", "content", "metadata", "pageData"));
     }
 
     @Override
@@ -81,10 +84,8 @@ public class PageSegmentBolt extends BaseRichBolt {
         long startTime = System.currentTimeMillis();
         byte[] content = input.getBinaryByField("content");
         final Metadata metadata = (Metadata) input.getValueByField("metadata");
-        if (!metadata.containsKey("depth"))
-        {
-            metadata.addValue("depth", "1");
-        }
+        PageData pageData = new PageData();
+
 
         String charset = CharsetIdentification.getCharset(metadata, content, -1);
         String html = Charset.forName(charset).decode(ByteBuffer.wrap(content)).toString();
@@ -126,26 +127,30 @@ public class PageSegmentBolt extends BaseRichBolt {
         String contentText = "";
         List<TextBlock> contentBlocks = new ArrayList<>();
         List<List<String>> blockLinks = new ArrayList<>();
+        List<String> blockTexts = new ArrayList<>();
 
         for (int i = 0; i < blocks.size(); i++)
         {   
             String blockText = blocks.get(i).getText();
-            StringBuilder textReplacedLinks = new StringBuilder(blockText);
             
             Matcher matcher = pattern.matcher(blockText);
+            StringBuilder textReplacedLinks = new StringBuilder(blockText);
             List<String> linksInBlock = new ArrayList<>();
             while (matcher.find()) {
+                textReplacedLinks = new StringBuilder(textReplacedLinks);
                 int linkIndex = Integer.parseInt(matcher.group(1));
                 linksInBlock.add(links.get(linkIndex));
                 String anchorText = anchorTexts.get(linkIndex);
-                textReplacedLinks.replace(matcher.start(), matcher.start()+anchorText.length(), anchorText);
+                textReplacedLinks = textReplacedLinks.replace(matcher.start(), matcher.end(), " " + anchorText + " ");
+                matcher = pattern.matcher(textReplacedLinks.toString());
             }
-            blockLinks.add(linksInBlock);
-            
+
             if (blocks.get(i).isContent())
             {
+                blockLinks.add(linksInBlock);
                 contentBlocks.add(blocks.get(i));
                 contentText += textReplacedLinks.toString();
+                blockTexts.add(textReplacedLinks.toString());
             }
         }
 
@@ -153,7 +158,19 @@ public class PageSegmentBolt extends BaseRichBolt {
 
         long endTime = System.currentTimeMillis();
         LOG.info("Time: {}", endTime-startTime);
-        collector.emit(input, new Values(url, content, metadata, contentBlocks, blockLinks, contentText));
-        collector.ack(input);
+
+        if (contentBlocks.size() == 0)
+        {
+            LOG.info("Stop processing tuple. No content on webpage.");
+            collector.fail(input);
+        }else{
+            pageData.contentBlocks = contentBlocks;
+            pageData.blockLinks = blockLinks;
+            pageData.contentText = contentText;
+            pageData.blockTexts = blockTexts;
+            pageData.url = url;
+            collector.emit(input, new Values(url, content, metadata, pageData));
+            collector.ack(input);
+        }
     }
 }

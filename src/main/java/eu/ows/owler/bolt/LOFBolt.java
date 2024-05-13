@@ -20,6 +20,9 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import eu.ows.owler.util.PageData;
+
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -59,18 +62,16 @@ public class LOFBolt extends BaseRichBolt {
     public void execute(Tuple input) {
         long startTime = System.currentTimeMillis();
         String url = input.getStringByField("url");
-        double[] pageEmbedding = (double[]) input.getValueByField("pageEmbedding");
+        PageData pageData = (PageData) input.getValueByField("pageData"); 
 
-        @SuppressWarnings("unchecked")
-        List<List<String>> blockLinks = (List<List<String>>) input.getValueByField("blockLinks");
 
-        @SuppressWarnings("unchecked")
-        List<String> pageTextBlocks = (List<String>) input.getValueByField("pageTextBlocks");
-
-        @SuppressWarnings("unchecked")
-        List<double[]> pageBlockEmbeddings = (List<double[]>) input.getValueByField("pageBlockEmbeddings");
+        double[] pageEmbedding = pageData.pageTextEmbedding;
+        List<List<String>> blockLinks = pageData.blockLinks;
+        List<String> pageTextBlocks = pageData.blockTexts;
+        List<double[]> pageBlockEmbeddings = pageData.blockEmbeddings;
 
         List<String> predictions = new ArrayList<>();
+        List<Float> outlierScores = new ArrayList<>();
         
         for (int i = 0; i < pageBlockEmbeddings.size(); i++)
         {
@@ -86,10 +87,14 @@ public class LOFBolt extends BaseRichBolt {
                 post.setEntity(new StringEntity(json.toString(), StandardCharsets.UTF_8));
                 CloseableHttpResponse response = this.httpClient.execute(post);
                 String result = EntityUtils.toString(response.getEntity());
+                LOG.info("{} | LOF RESULTS: {}", url, result);
                 JSONObject responseJson = new JSONObject(result);
                 String prediction = responseJson.getString("prediction"); 
+                String lof_score = responseJson.getString("lof_score");
+                outlierScores.add(Float.parseFloat(lof_score));
                 predictions.add(prediction);
                 response.close();
+                
             } catch (Exception e) {
                 LOG.error("Failed prediction", e);
             }
@@ -97,6 +102,8 @@ public class LOFBolt extends BaseRichBolt {
 
         long endTime = System.currentTimeMillis();
         LOG.info("Time to predict relevance: {}", endTime - startTime);
+
+
 
         //NOTE - Just for testing purposes, remove later!
         // Why does this have to be so convoluted?????
@@ -121,14 +128,17 @@ public class LOFBolt extends BaseRichBolt {
         } catch (Exception e) {LOG.info("Failed page Prediction: ", e);}
         JSONObject responseJson = new JSONObject(result);
         String pagePrediction = responseJson.getString("prediction"); 
+        String pageOutlierfactor = responseJson.getString("lof_score");
         try (PrintWriter writer = new PrintWriter(new FileWriter(filename.replace(".txt", "") + (pagePrediction.equals("-1") ? "_0" : "_1") +".txt"))) 
         {
-            writer.println("Whole Page Prediction: " + pagePrediction + " URL: "+url);
+            writer.println("Whole Page Prediction: " + pagePrediction + "; score: " + pageOutlierfactor + "; URL: "+url);
             for (int i = 0; i < predictions.size(); i++)
             {
                 String prediction = predictions.get(i);
                 String text = pageTextBlocks.get(i);
-                writer.println(prediction + ": " + text.replace("\n", ""));
+                Float score = outlierScores.get(i);
+            
+                writer.println(prediction + ": " + "score: " + Float.toString(score)  + " " + text.replace("\n", ""));
                 if (prediction.equals("1")) {
                     LOG.info("Block {} is relevant in {}", i, url);
                     numRelevantBlocks += 1;

@@ -16,24 +16,26 @@ def get_bert_embeddings(embedding_file=None):
 class LOF:
     def __init__(self):
         self.lof_model = LocalOutlierFactor(n_neighbors=8, novelty=True)
-        self.corpus_embedding = get_bert_embeddings("data/model/corpus_embedding_d_0_rp.hdf5")
+        self.corpus_embedding = get_bert_embeddings("data/model/corpus_embedding.hdf5")
         self.lof_model.fit(self.corpus_embedding)
         print("Finished init LOF")
 
     def predict(self, document_embedding):
         document_embedding = np.array(document_embedding)
         prediction = self.lof_model.predict([document_embedding])[0]
-        return str(prediction)
+        lof_score = self.lof_model.decision_function([document_embedding])[0]
+        return str(prediction), str(lof_score)
 
 lof = LOF()
 
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.get_json()
+    print(type(data['embedding']))
     document_embedding = data['embedding']
-    print("Sum of Embedding:", np.sum(np.array(document_embedding)))
-    prediction = lof.predict(document_embedding)
-    return jsonify({"prediction": prediction})
+    prediction, lof_score = lof.predict(document_embedding)
+    print(type(prediction), type(lof_score))
+    return jsonify({"prediction": prediction, "lof_score": lof_score})
 
 if __name__ == "__main__":
     print("Starting LOF api")

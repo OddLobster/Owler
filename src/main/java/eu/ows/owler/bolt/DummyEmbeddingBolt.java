@@ -94,6 +94,9 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
         final Metadata metadata = (Metadata) input.getValueByField("metadata");
 
         @SuppressWarnings("unchecked")
+        List<String> blockTexts = (List<String>) input.getValueByField("blockTexts");
+
+        @SuppressWarnings("unchecked")
         List<List<String>> blockLinks = (List<List<String>>) input.getValueByField("blockLinks");
 
         @SuppressWarnings("unchecked")
@@ -115,7 +118,7 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
 
         long endTime = System.currentTimeMillis();
         LOG.info("Emitted all blocks in: {} ms", endTime-startTime);
-        collector.emit(input, new Values(url, content, metadata, randomEmbedding, embeddings, pageBlockTexts, blockLinks));
+        collector.emit(input, new Values(url, content, metadata, randomEmbedding, embeddings, blockTexts, blockLinks));
         collector.ack(input);
     }
 }

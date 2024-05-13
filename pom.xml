@@ -26,6 +26,13 @@
 		<jackson-databind.version>2.15.0</jackson-databind.version>
 	</properties>
 
+	<repositories>
+		<repository>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
+		</repository>
+	</repositories>
+
 	<build>
 		<extensions>
 			<extension>
@@ -350,12 +357,12 @@
 			<artifactId>deeplearning4j-nlp</artifactId>
 			<version>1.0.0-M2.1</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.nd4j</groupId>
 			<artifactId>nd4j-onnxruntime</artifactId>
 			<version>1.0.0-M2.1</version>
 		</dependency>
+
 
 		<dependency>
 			<groupId>de.l3s.boilerpipe</groupId>
@@ -378,5 +385,42 @@
 			<artifactId>json-simple</artifactId>
 			<version>1.1.1</version>
 		</dependency>
+
+		<!-- <dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+			<version>1.18.8</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>1.12.145</version>
+		</dependency> -->
+		<!-- https://mvnrepository.com/artifact/com.johnsnowlabs.nlp/spark-nlp
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-core_2.12</artifactId>
+			<version>3.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-sql_2.12</artifactId>
+			<version>3.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.johnsnowlabs.nlp</groupId>
+			<artifactId>spark-nlp_2.12</artifactId>
+			<version>5.3.3</version>
+		</dependency> -->
+		<dependency>
+			<groupId>com.github.OddLobster</groupId>
+			<artifactId>bertTokenizerFix</artifactId>
+			<version>master-SNAPSHOT</version>  <!-- Use a commit hash or tag if available -->
+		</dependency>
+
+
  </dependencies>
+
+
 </project>
