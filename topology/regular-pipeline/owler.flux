@@ -77,7 +77,7 @@ bolts:
     parallelism: 1
   - id: "embedder"
     className: "eu.ows.owler.bolt.EmbeddingBolt"
-    parallelism: 8
+    parallelism: 4
   - id: "classifier"
     className: "eu.ows.owler.bolt.ClassificationBolt"
     parallelism: 1
@@ -177,7 +177,7 @@ streams:
       args: ["url"]
       streamId: "status"
 
-  - from: "parser"
+  - from: "classifier"
     to: "status_frontier"
     grouping:
       type: FIELDS

@@ -138,7 +138,6 @@ public class EmbeddingBolt extends BaseRichBolt {
         {
             String text = blockTexts.get(i);
             INDArray tokenized_text = tokenizeText(text, max_embedding_length);
-            LOG.info("TOKENIZED TEXT FED TO BERT: {}", tokenized_text);
             INDArray attention_mask = createAttentionMask(tokenized_text);
             
             Map<String, INDArray> inputs = new LinkedHashMap<>();
@@ -169,8 +168,7 @@ public class EmbeddingBolt extends BaseRichBolt {
         double[] pageTextEmbedding = meanEmbedding.data().asDouble();
         
         long endTime = System.currentTimeMillis();
-        LOG.info("EmbeddingBolt processing took time {} ms", (endTime - startTime));
-        LOG.info("Blocks processed: {}", blocks.size());
+        LOG.info("EmbeddingBolt processing took time {} ms. \n Blocks processed: {}", (endTime - startTime), blocks.size());
         
         pageData.blockEmbeddings = blockEmbeddings;
         pageData.pageTextEmbedding = pageTextEmbedding;

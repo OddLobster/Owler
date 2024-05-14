@@ -1,14 +1,8 @@
 package eu.ows.owler.bolt;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.storm.task.OutputCollector;
@@ -17,20 +11,14 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
-import org.jsoup.nodes.Document;
-import org.jsoup.parser.Parser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Random;
 import org.apache.storm.tuple.Values;
 import eu.ows.owler.util.PageData;
 
-import de.l3s.boilerpipe.document.TextBlock;
-import de.l3s.boilerpipe.extractors.DefaultExtractor;
-import de.l3s.boilerpipe.sax.HTMLDocument;
-
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.util.CharsetIdentification;
+import com.digitalpebble.stormcrawler.parse.Outlink;
 
 public class ClassificationBolt extends BaseRichBolt {
     private OutputCollector collector;
@@ -42,6 +30,8 @@ public class ClassificationBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(new Fields("url", "content", "metadata", "pageData"));
+        declarer.declareStream(StatusStreamName, new Fields("url", "metadata", "status"));
+
     }
 
     @Override
@@ -79,9 +69,31 @@ public class ClassificationBolt extends BaseRichBolt {
             }
         }
 
+        pageData.isRelevant = pageIsRelevant;
+
+        if (pageIsRelevant) {
+            List<String> outlinksList = new ArrayList<>();
+            for (int i = 0; i < pageData.blockLinks.size(); i++)
+            {
+                if (pageData.pageBlockRelevance.get(i) == false)
+                {
+                    continue;
+                }
+                for (int j = 0; j < pageData.blockLinks.get(i).size(); j++)
+                {
+                    outlinksList.add(pageData.blockLinks.get(i).get(j));
+                }
+            }
+
+            metadata.setValues("outlinks", outlinksList.toArray(new String[outlinksList.size()]));
+        }
+
+
+
         long endTime = System.currentTimeMillis();
 
-        LOG.info("ClassificationBolt processing took time {} ms", endtime - startTime);
+        LOG.info("ClassificationBolt processing took time {} ms", endTime - startTime);
+        LOG.info("Metadata for {} is {}", url, metadata);
         collector.emit(input, new Values(url, content, metadata, pageData));
         collector.ack(input);
     }

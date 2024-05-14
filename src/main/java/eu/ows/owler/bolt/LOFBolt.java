@@ -109,14 +109,22 @@ public class LOFBolt extends BaseRichBolt {
 
         double RELEVANT_THRESHOLD = 0.2;
         int NUM_SEGMENTS = 4;
+        List<Boolean> pageBlockRelevance = new ArrayList<>();
 
         int numRelevantBlocks = 0;
         for (int i = 0; i < predictions.size(); i++) 
         {
             if (predictions.get(i).equals("1")) {
                 numRelevantBlocks += 1;
+                pageBlockRelevance.add(true);
+            }
+            else{
+                pageBlockRelevance.add(false);
             }
         }
+        pageData.pageBlockRelevance = pageBlockRelevance;
+
+
         // NOTE this is only temporary. Need to figure out proper classification. (Decision tree thresholds??????)
         Boolean pageIsRelevant = ((float)numRelevantBlocks/predictions.size()) > RELEVANT_THRESHOLD ? true : false;
 
@@ -248,9 +256,9 @@ public class LOFBolt extends BaseRichBolt {
             }
             for (int i = 0; i < NUM_SEGMENTS; i++) {
                 writer.println("Percentage of relevant blocks segment_" +Integer.toString(i)+ ": " + Float.toString(pageSegmentRelevantBlockPercentages.get(i)));
-                writer.println("Sum of all segment_" +Integer.toString(i)+ " scores: " + Float.toString(pageSegmentLOFSums.get(i)));
-                writer.println("Average of segment_" +Integer.toString(i)+ " scores: " + Float.toString(pageSegmentLOFMeans.get(i)));
-                writer.println("Variance of segment_"+Integer.toString(i)+" scores: " + Float.toString(pageSegmentLOFVariances.get(i)));
+                writer.println("Sum of all segment_" +Integer.toString(i)+ "(" + Integer.toString(pageSegmentLOFMeans.size()) + ")" + " scores: " + Float.toString(pageSegmentLOFSums.get(i)));
+                writer.println("Average of segment_" +Integer.toString(i)+ "(" + Integer.toString(pageSegmentLOFMeans.size()) + ")" + " scores: " + Float.toString(pageSegmentLOFMeans.get(i)));
+                writer.println("Variance of segment_"+Integer.toString(i)+ "(" + Integer.toString(pageSegmentLOFMeans.size()) + ")" + " scores: " + Float.toString(pageSegmentLOFVariances.get(i)));
             }
             writer.println("-----Whole Page Stats-----");
             writer.println("Relevant Blocks in page: "+ Integer.toString(numRelevantBlocks));
@@ -258,7 +266,6 @@ public class LOFBolt extends BaseRichBolt {
             writer.println("Sum of all scores: " + Float.toString(wholePageLOFSum));
             writer.println("Average of scores: " + Float.toString(wholePageLOFMean));
             writer.println("Variance of scores: " + Float.toString(wholePageLOFVariance));
-
         }
         catch (IOException e) 
         {

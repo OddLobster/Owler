@@ -78,6 +78,16 @@ public class OWSParserBolt extends BaseRichBolt {
         final String urlString = tuple.getStringByField("url");
         final Metadata metadata = (Metadata) tuple.getValueByField("metadata");
         final byte[] content = tuple.getBinaryByField("content");
+        if (metadata.containsKey("depth"))
+        {
+            String d = metadata.getFirstValue("depth");
+            int new_d = Integer.valueOf(d) + 1;
+            metadata.setValue("depth", Integer.toString(new_d));
+        }
+        else
+        {
+            metadata.setValue("depth", "1");
+        }
 
         LOG.info("Parsing started for {}", urlString);
 
@@ -202,6 +212,7 @@ public class OWSParserBolt extends BaseRichBolt {
         final List<String> outlinksList = new ArrayList<>();
         if (emitOutlinks) {
             for (Outlink outlink : parse.getOutlinks()) {
+                LOG.info("@@@OUTLINK METADATA: {}", outlink.getMetadata().toString());
                 outlinksList.add(outlink.getTargetURL());
             }
             metadata.setValues("outlinks", outlinksList.toArray(new String[outlinksList.size()]));
@@ -218,7 +229,7 @@ public class OWSParserBolt extends BaseRichBolt {
                             parseDoc.getText()));
         }
 
-        LOG.info("OWSParserBolt processing took time: {} ms", urlString, System.currentTimeMillis() - start);
+        LOG.info("OWSParserBolt processing took time: {} ms", System.currentTimeMillis() - start);
 
         collector.ack(tuple);
     }

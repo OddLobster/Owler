@@ -15,6 +15,8 @@ public class PageData {
     public List<double[]> blockEmbeddings;
     public int depth;
     public PageStatistics pageStats;
+    public List<Boolean> pageBlockRelevance;
+    public Boolean isRelevant;
 
     public PageData() {
         blockLinks = new ArrayList<>();
