@@ -18,6 +18,9 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
+import com.digitalpebble.stormcrawler.Metadata;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +42,7 @@ public class LOFBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "content", "metadata", "text"));
+        declarer.declare(new Fields("url", "content", "metadata", "pageData"));
     }
 
     @Override
@@ -63,6 +66,8 @@ public class LOFBolt extends BaseRichBolt {
         long startTime = System.currentTimeMillis();
         String url = input.getStringByField("url");
         PageData pageData = (PageData) input.getValueByField("pageData"); 
+        byte[] content = input.getBinaryByField("content");
+        final Metadata metadata = (Metadata) input.getValueByField("metadata");
 
 
         double[] pageEmbedding = pageData.pageTextEmbedding;
@@ -99,23 +104,124 @@ public class LOFBolt extends BaseRichBolt {
                 LOG.error("Failed prediction", e);
             }
         }
+        pageData.pageStats.pageBlockOutlierScores = outlierScores;
+        pageData.pageStats.pageBlockPredictions = predictions;
 
+        double RELEVANT_THRESHOLD = 0.2;
+        int NUM_SEGMENTS = 4;
+
+        int numRelevantBlocks = 0;
+        for (int i = 0; i < predictions.size(); i++) 
+        {
+            if (predictions.get(i).equals("1")) {
+                numRelevantBlocks += 1;
+            }
+        }
+        // NOTE this is only temporary. Need to figure out proper classification. (Decision tree thresholds??????)
+        Boolean pageIsRelevant = ((float)numRelevantBlocks/predictions.size()) > RELEVANT_THRESHOLD ? true : false;
+
+        Float wholePageLOFVariance = 0.0f;
+        Float wholePageLOFMean = 0.0f;
+        Float wholePageLOFSum = 0.0f;
+        Float wholePageRelevantBlockPercentage = 0.0f;
+
+        List<Float> pageSegmentLOFMeans = new ArrayList<>();
+        List<Float> pageSegmentLOFSums = new ArrayList<>();
+        List<Float> pageSegmentLOFVariances = new ArrayList<>();
+        List<Float> pageSegmentRelevantBlockPercentages = new ArrayList<>();        
+
+        if (predictions.size() > 0)
+        {
+                    
+            int segmentSize = outlierScores.size() / NUM_SEGMENTS;
+            for (int i = 0; i < NUM_SEGMENTS; i++) {
+                int start = i * segmentSize;
+                int end = start + segmentSize;
+                List<Float> segment = new ArrayList<>(outlierScores.subList(start, end));
+                List<String> segmentPredictions = new ArrayList<>(predictions.subList(start, end));
+                int numRelevantBlocksPerSegment = 0;
+                for (int j = 0; j < segmentPredictions.size(); j++)
+                {
+                    if(segmentPredictions.get(j).equals("1"))
+                    {
+                        numRelevantBlocksPerSegment += 1;
+                    }
+                }
+                float percentageRelevantBlocksInSegment = (float)numRelevantBlocksPerSegment/(float)segmentPredictions.size();
+                float sum = 0;
+                for (Float score : segment) {
+                    sum += score;
+                }
+                float mean = sum/segment.size();
+                float sumOfSquares = 0;
+                for (Float score : segment) {
+                    sumOfSquares += Math.pow(score - mean, 2);
+                }
+                float variance = sumOfSquares / segment.size();
+                pageSegmentLOFMeans.add(mean);
+                pageSegmentLOFSums.add(sum);
+                pageSegmentLOFVariances.add(variance);
+                pageSegmentRelevantBlockPercentages.add(percentageRelevantBlocksInSegment);
+            }
+
+            float sum = 0;
+            for (Float score : outlierScores) {
+                sum += score;
+            }
+            float mean = sum/outlierScores.size();
+            float sumOfSquares = 0;
+            for (Float score : outlierScores) {
+                sumOfSquares += Math.pow(score - mean, 2);
+            }
+            float variance = sumOfSquares / outlierScores.size();
+            wholePageLOFMean = mean;
+            wholePageLOFSum = sum;
+            wholePageLOFVariance = variance;
+            wholePageRelevantBlockPercentage = (float)numRelevantBlocks/(float)predictions.size();
+        }
+        LOG.info("{} relevant blocks in url: {}", Integer.toString(numRelevantBlocks), url);
         long endTime = System.currentTimeMillis();
-        LOG.info("Time to predict relevance: {}", endTime - startTime);
+        LOG.info("LOFBolt processing time: {} ms", endTime - startTime);
+
+
+        pageData.pageStats.numSegments = NUM_SEGMENTS;
+        pageData.pageStats.numBlocks = pageTextBlocks.size();
+        pageData.pageStats.numRelevantPageBlocks = numRelevantBlocks;
+        pageData.pageStats.pageSegmentLOFMeans = pageSegmentLOFMeans;
+        pageData.pageStats.pageSegmentLOFSums = pageSegmentLOFSums;
+        pageData.pageStats.pageSegmentLOFVariances = pageSegmentLOFVariances;
+        pageData.pageStats.pageSegmentRelevantBlockPercentages = pageSegmentRelevantBlockPercentages;
+        pageData.pageStats.wholePageLOFMean = wholePageLOFMean;
+        pageData.pageStats.wholePageLOFSum = wholePageLOFSum;
+        pageData.pageStats.wholePageLOFVariance = wholePageLOFVariance;
+        pageData.pageStats.wholePageRelevantBlockPercentage = wholePageRelevantBlockPercentage;
+
+        collector.emit(input, new Values(url, content, metadata, pageData));
+        collector.ack(input);
 
 
 
-        //NOTE - Just for testing purposes, remove later!
-        // Why does this have to be so convoluted?????
+
+
+
+
+
+
+
+
+
+        // NOTE - Just for testing purposes, remove later!
         String filename = OUTPUT_FOLDER + "failed.txt";
+        String[] parts = url.split("/");
+        String lastPart = parts[parts.length - 1];
         try (Stream<Path> filesStream = Files.list(Paths.get(OUTPUT_FOLDER))) {
             int numFiles = (int) filesStream.filter(Files::isRegularFile).count();
+
             filename = OUTPUT_FOLDER + "document_" + (numFiles+1) + ".txt";
         } catch (Exception e)
         {
             LOG.info("Failed to get number of files in Folder {}: {}", OUTPUT_FOLDER, e);
         }
-        int numRelevantBlocks = 0;
         JSONObject json = new JSONObject();
         json.put("embedding", pageEmbedding);
         HttpPost post = new HttpPost("http://lof-service:43044/predict");
@@ -129,7 +235,8 @@ public class LOFBolt extends BaseRichBolt {
         JSONObject responseJson = new JSONObject(result);
         String pagePrediction = responseJson.getString("prediction"); 
         String pageOutlierfactor = responseJson.getString("lof_score");
-        try (PrintWriter writer = new PrintWriter(new FileWriter(filename.replace(".txt", "") + (pagePrediction.equals("-1") ? "_0" : "_1") +".txt"))) 
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename.replace(".txt", "") + "_" + pageIsRelevant.toString() + "_"+ lastPart +".txt"))) 
         {
             writer.println("Whole Page Prediction: " + pagePrediction + "; score: " + pageOutlierfactor + "; URL: "+url);
             for (int i = 0; i < predictions.size(); i++)
@@ -137,30 +244,28 @@ public class LOFBolt extends BaseRichBolt {
                 String prediction = predictions.get(i);
                 String text = pageTextBlocks.get(i);
                 Float score = outlierScores.get(i);
-            
                 writer.println(prediction + ": " + "score: " + Float.toString(score)  + " " + text.replace("\n", ""));
-                if (prediction.equals("1")) {
-                    LOG.info("Block {} is relevant in {}", i, url);
-                    numRelevantBlocks += 1;
-                    for (int j = 0; j < blockLinks.get(i).size(); j++)
-                    {
-                        LOG.info("  Child Link {} should be prioritzed", blockLinks.get(i).get(j));
-                    }
-                }
             }
+            for (int i = 0; i < NUM_SEGMENTS; i++) {
+                writer.println("Percentage of relevant blocks segment_" +Integer.toString(i)+ ": " + Float.toString(pageSegmentRelevantBlockPercentages.get(i)));
+                writer.println("Sum of all segment_" +Integer.toString(i)+ " scores: " + Float.toString(pageSegmentLOFSums.get(i)));
+                writer.println("Average of segment_" +Integer.toString(i)+ " scores: " + Float.toString(pageSegmentLOFMeans.get(i)));
+                writer.println("Variance of segment_"+Integer.toString(i)+" scores: " + Float.toString(pageSegmentLOFVariances.get(i)));
+            }
+            writer.println("-----Whole Page Stats-----");
             writer.println("Relevant Blocks in page: "+ Integer.toString(numRelevantBlocks));
-            if (predictions.size() > 0)
-            {
-                writer.println("Percentage of relevant blocks: " + Float.toString((float)numRelevantBlocks/(float)predictions.size()));
-            }
-            LOG.info("{} relevant blocks in url: {}", Integer.toString(numRelevantBlocks), url);
-        } catch (IOException e) 
+            writer.println("Percentage of relevant blocks: " + Float.toString((float)numRelevantBlocks/(float)predictions.size()));
+            writer.println("Sum of all scores: " + Float.toString(wholePageLOFSum));
+            writer.println("Average of scores: " + Float.toString(wholePageLOFMean));
+            writer.println("Variance of scores: " + Float.toString(wholePageLOFVariance));
+
+        }
+        catch (IOException e) 
         {
-            LOG.info("Failed to write prediction to file {}", e);
+            LOG.info("Failed to write prediction debug info to file {}", e);
             e.printStackTrace();
         }
         // end of debug block
 
-        collector.ack(input);
     }
 }

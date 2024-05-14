@@ -10,13 +10,17 @@ def get_bert_embeddings(embedding_file=None):
         embeddings = []
         for key in hdf5_file.keys():
             embeddings.append(np.array(hdf5_file[key]))
-        embeddings = np.array(embeddings).squeeze(1)
+        try:
+            embeddings = np.array(embeddings).squeeze(1)
+        except:
+            embeddings = np.array(embeddings)
     return embeddings
 
 class LOF:
     def __init__(self):
         self.lof_model = LocalOutlierFactor(n_neighbors=8, novelty=True)
         self.corpus_embedding = get_bert_embeddings("data/model/corpus_embedding.hdf5")
+        print(f"Corpus shape: {self.corpus_embedding.shape}")
         self.lof_model.fit(self.corpus_embedding)
         print("Finished init LOF")
 

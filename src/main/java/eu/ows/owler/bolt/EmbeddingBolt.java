@@ -74,7 +74,17 @@ public class EmbeddingBolt extends BaseRichBolt {
         List<String> tokens = tokenizer.tokenize(text);
         List<Integer> token_ids = tokenizer.convert_tokens_to_ids(tokens);
         long[] array = token_ids.stream().mapToLong(Integer::longValue).toArray();
+        if (array.length < max_length) {
+            long[] paddedArray = new long[max_length];
+            System.arraycopy(array, 0, paddedArray, 0, array.length);
+            array = paddedArray;
+        } else if (array.length > max_length) {
+            long[] truncatedArray = new long[max_length];
+            System.arraycopy(array, 0, truncatedArray, 0, max_length);
+            array = truncatedArray;
+        }
         INDArray tokenized_text = Nd4j.createFromArray(new long[][]{array});
+        
         return tokenized_text.castTo(DataType.INT64);
     }
 
@@ -128,6 +138,7 @@ public class EmbeddingBolt extends BaseRichBolt {
         {
             String text = blockTexts.get(i);
             INDArray tokenized_text = tokenizeText(text, max_embedding_length);
+            LOG.info("TOKENIZED TEXT FED TO BERT: {}", tokenized_text);
             INDArray attention_mask = createAttentionMask(tokenized_text);
             
             Map<String, INDArray> inputs = new LinkedHashMap<>();
@@ -158,7 +169,7 @@ public class EmbeddingBolt extends BaseRichBolt {
         double[] pageTextEmbedding = meanEmbedding.data().asDouble();
         
         long endTime = System.currentTimeMillis();
-        LOG.info("Embedding took: " + (endTime - startTime) + " ms");
+        LOG.info("EmbeddingBolt processing took time {} ms", (endTime - startTime));
         LOG.info("Blocks processed: {}", blocks.size());
         
         pageData.blockEmbeddings = blockEmbeddings;

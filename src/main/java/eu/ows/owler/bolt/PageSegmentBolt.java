@@ -157,7 +157,7 @@ public class PageSegmentBolt extends BaseRichBolt {
         LOG.info("Number of content blocks: {} in url: {}", contentBlocks.size(), url);   
 
         long endTime = System.currentTimeMillis();
-        LOG.info("Time: {}", endTime-startTime);
+        LOG.info("PageSegmentBolt processing took time {} ms", endTime-startTime);
 
         if (contentBlocks.size() == 0)
         {

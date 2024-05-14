@@ -77,10 +77,13 @@ bolts:
     parallelism: 1
   - id: "embedder"
     className: "eu.ows.owler.bolt.EmbeddingBolt"
-    parallelism: 4
+    parallelism: 8
   - id: "classifier"
+    className: "eu.ows.owler.bolt.ClassificationBolt"
+    parallelism: 1
+  - id: "lof"
     className: "eu.ows.owler.bolt.LOFBolt"
-    parallelism: 4
+    parallelism: 2
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
     parallelism: 1
@@ -137,6 +140,11 @@ streams:
       type: LOCAL_OR_SHUFFLE
 
   - from: "embedder"
+    to: "lof"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+
+  - from: "lof"
     to: "classifier"
     grouping:
       type: LOCAL_OR_SHUFFLE

@@ -218,7 +218,7 @@ public class OWSParserBolt extends BaseRichBolt {
                             parseDoc.getText()));
         }
 
-        LOG.info("Total parsing for {} in {} msec", urlString, System.currentTimeMillis() - start);
+        LOG.info("OWSParserBolt processing took time: {} ms", urlString, System.currentTimeMillis() - start);
 
         collector.ack(tuple);
     }
