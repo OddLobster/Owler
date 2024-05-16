@@ -53,9 +53,13 @@ components:
          - "https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.1/"
 
 spouts:
-  - id: "frontierspout"
-    className: "eu.ows.owler.spout.FrontierSpout"
-    parallelism: 1
+#   - id: "frontierspout"
+#     className: "eu.ows.owler.urlfrontier.OWSSpout.java"
+#     parallelism: 1
+
+    - id: "frontierspout"
+      className: "eu.ows.owler.spout.FrontierSpout"
+      parallelism: 1
 
 #  - id: "filespout"
 #    className: "com.digitalpebble.stormcrawler.spout.FileSpout"

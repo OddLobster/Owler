@@ -1,8 +1,5 @@
 package eu.ows.owler.bolt;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -17,19 +14,15 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
-import org.jsoup.nodes.Document;
-import org.jsoup.parser.Parser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Random;
 import org.apache.storm.tuple.Values;
 
 import de.l3s.boilerpipe.document.TextBlock;
-import de.l3s.boilerpipe.extractors.DefaultExtractor;
-import de.l3s.boilerpipe.sax.HTMLDocument;
+import eu.ows.owler.util.PageData;
 
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.util.CharsetIdentification;
 
 public class DummyEmbeddingBolt extends BaseRichBolt {
     private OutputCollector collector;
@@ -40,7 +33,7 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "content", "metadata", "pageEmbedding", "pageBlockEmbeddings", "pageTextBlocks", "blockLinks"));
+        declarer.declare(new Fields("url", "content", "metadata", "pageData"));
     }
 
     private static List<double[]> readEmbeddings(int numEmbeddings) {
@@ -92,15 +85,10 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
         String url = input.getStringByField("url");
         byte[] content = input.getBinaryByField("content");
         final Metadata metadata = (Metadata) input.getValueByField("metadata");
-
-        @SuppressWarnings("unchecked")
-        List<String> blockTexts = (List<String>) input.getValueByField("blockTexts");
-
-        @SuppressWarnings("unchecked")
-        List<List<String>> blockLinks = (List<List<String>>) input.getValueByField("blockLinks");
-
-        @SuppressWarnings("unchecked")
-        List<TextBlock> blocks = (List<TextBlock>) input.getValueByField("blocks");
+        PageData pageData = (PageData) input.getValueByField("pageData");
+        String pageText = pageData.contentText;
+        List<String> blockTexts = pageData.blockTexts;
+        List<TextBlock> blocks = pageData.contentBlocks;
 
         LOG.info("Called EmbeddingBolt for {}", url);
         LOG.info("Blocks to process: {}", blocks.size());
@@ -115,10 +103,12 @@ public class DummyEmbeddingBolt extends BaseRichBolt {
             embeddings.add(randomEmbedding);
             pageBlockTexts.add("This is dummy text");
         }
-
+        pageData.pageTextEmbedding = randomEmbedding;
+        pageData.blockEmbeddings = embeddings;
+        
         long endTime = System.currentTimeMillis();
         LOG.info("Emitted all blocks in: {} ms", endTime-startTime);
-        collector.emit(input, new Values(url, content, metadata, randomEmbedding, embeddings, blockTexts, blockLinks));
+        collector.emit(input, new Values(url, content, metadata, pageData));
         collector.ack(input);
     }
 }

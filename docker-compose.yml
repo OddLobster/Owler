@@ -76,6 +76,7 @@ services:
       - ./model:/data/model
       - ./data/model:/bert/model
       - ${OUTPUT:-./output}:/outdata
+      - ./src/main/resources/dataset:/resources
     external_links:
       - zookeeper
     restart: always
@@ -127,6 +128,7 @@ services:
       - maven-repo:/localdata1/frue_ra/.m2
       - ./logs:/loginternal
       - ${OUTPUT:-./output}:/outdata
+      - ./src/main/resources/dataset:/resources
     restart: "no"
     extra_hosts:
       - host.docker.internal:host-gateway

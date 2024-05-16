@@ -17,6 +17,7 @@ public class PageData {
     public PageStatistics pageStats;
     public List<Boolean> pageBlockRelevance;
     public Boolean isRelevant;
+    public double pageRelevance;
 
     public PageData() {
         blockLinks = new ArrayList<>();

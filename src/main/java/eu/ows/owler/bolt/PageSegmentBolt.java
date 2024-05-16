@@ -43,7 +43,9 @@ import org.jsoup.parser.Parser;
 import java.nio.ByteBuffer;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.net.MalformedURLException;
 import java.net.URL;
+import com.digitalpebble.stormcrawler.util.URLUtil;
 
 import eu.ows.owler.util.PageData;
 
@@ -139,7 +141,15 @@ public class PageSegmentBolt extends BaseRichBolt {
             while (matcher.find()) {
                 textReplacedLinks = new StringBuilder(textReplacedLinks);
                 int linkIndex = Integer.parseInt(matcher.group(1));
-                linksInBlock.add(links.get(linkIndex));
+                // FIXME
+                // something like this: URLUtil.resolveURL(url, aElement.attr("href")).toString()
+                try{
+                    linksInBlock.add(URLUtil.resolveURL(new URL(url), links.get(linkIndex)).toString());
+                } catch (MalformedURLException e)
+                {
+                    LOG.info("MALFORMED URL EXCEPTION IN PAGE SEGMENT: {}", e);
+                }
+                // linksInBlock.add(links.get(linkIndex));
                 String anchorText = anchorTexts.get(linkIndex);
                 textReplacedLinks = textReplacedLinks.replace(matcher.start(), matcher.end(), " " + anchorText + " ");
                 matcher = pattern.matcher(textReplacedLinks.toString());

@@ -78,15 +78,9 @@ public class OWSParserBolt extends BaseRichBolt {
         final String urlString = tuple.getStringByField("url");
         final Metadata metadata = (Metadata) tuple.getValueByField("metadata");
         final byte[] content = tuple.getBinaryByField("content");
-        if (metadata.containsKey("depth"))
+        if (!metadata.containsKey("maxLinkDepth"))
         {
-            String d = metadata.getFirstValue("depth");
-            int new_d = Integer.valueOf(d) + 1;
-            metadata.setValue("depth", Integer.toString(new_d));
-        }
-        else
-        {
-            metadata.setValue("depth", "1");
+            metadata.setValue("maxLinkDepth", "1");
         }
 
         LOG.info("Parsing started for {}", urlString);
@@ -141,7 +135,6 @@ public class OWSParserBolt extends BaseRichBolt {
                 if (noFollow) {
                     continue;
                 }
-
                 try {
                     String targetURL = URLUtil.resolveURL(url, aElement.attr("href")).toString();
                     outlinks.add(targetURL);
@@ -168,7 +161,6 @@ public class OWSParserBolt extends BaseRichBolt {
 
         if (StringUtils.isNotBlank(redirection) && !redirection.equals(urlString)) {
             LOG.info("Found redirection in {} to {}", urlString, redirection);
-
             Outlink outlink = filterOutlink(url, redirection, metadata);
             if (outlink != null) {
                 collector.emit(
@@ -185,7 +177,7 @@ public class OWSParserBolt extends BaseRichBolt {
             collector.ack(tuple);
             return;
         }
-        collector.emit("segment", new Values(urlString, content, metadata));
+        
 
         ParseResult parse = new ParseResult(toOutlinks(url, metadata, outlinks));
 
@@ -212,14 +204,16 @@ public class OWSParserBolt extends BaseRichBolt {
         final List<String> outlinksList = new ArrayList<>();
         if (emitOutlinks) {
             for (Outlink outlink : parse.getOutlinks()) {
-                LOG.info("@@@OUTLINK METADATA: {}", outlink.getMetadata().toString());
+                LOG.info("@@@OUTLINK METADATA URL: {} \n DATA:\n {}", outlink.getTargetURL(), outlink.getMetadata().toString());
                 outlinksList.add(outlink.getTargetURL());
             }
             metadata.setValues("outlinks", outlinksList.toArray(new String[outlinksList.size()]));
         }
 
+
         for (final Entry<String, ParseData> doc : parse) {
             final ParseData parseDoc = doc.getValue();
+            LOG.info("OWSPARSER parsedoc stuff: url:{} | ", doc.getKey());
             collector.emit(
                     tuple,
                     new Values(
@@ -229,8 +223,9 @@ public class OWSParserBolt extends BaseRichBolt {
                             parseDoc.getText()));
         }
 
-        LOG.info("OWSParserBolt processing took time: {} ms", System.currentTimeMillis() - start);
+        collector.emit("segment", new Values(urlString, content, metadata));
 
+        LOG.info("OWSParserBolt processing took time: {} ms", System.currentTimeMillis() - start);
         collector.ack(tuple);
     }
 

@@ -92,7 +92,6 @@ public class LOFBolt extends BaseRichBolt {
                 post.setEntity(new StringEntity(json.toString(), StandardCharsets.UTF_8));
                 CloseableHttpResponse response = this.httpClient.execute(post);
                 String result = EntityUtils.toString(response.getEntity());
-                LOG.info("{} | LOF RESULTS: {}", url, result);
                 JSONObject responseJson = new JSONObject(result);
                 String prediction = responseJson.getString("prediction"); 
                 String lof_score = responseJson.getString("lof_score");
@@ -112,11 +111,13 @@ public class LOFBolt extends BaseRichBolt {
         List<Boolean> pageBlockRelevance = new ArrayList<>();
 
         int numRelevantBlocks = 0;
+        double totalRelevantLOFScore = 0;
         for (int i = 0; i < predictions.size(); i++) 
         {
             if (predictions.get(i).equals("1")) {
                 numRelevantBlocks += 1;
                 pageBlockRelevance.add(true);
+                totalRelevantLOFScore += outlierScores.get(i);
             }
             else{
                 pageBlockRelevance.add(false);
@@ -127,6 +128,7 @@ public class LOFBolt extends BaseRichBolt {
 
         // NOTE this is only temporary. Need to figure out proper classification. (Decision tree thresholds??????)
         Boolean pageIsRelevant = ((float)numRelevantBlocks/predictions.size()) > RELEVANT_THRESHOLD ? true : false;
+
 
         Float wholePageLOFVariance = 0.0f;
         Float wholePageLOFMean = 0.0f;
@@ -203,10 +205,10 @@ public class LOFBolt extends BaseRichBolt {
         pageData.pageStats.wholePageLOFSum = wholePageLOFSum;
         pageData.pageStats.wholePageLOFVariance = wholePageLOFVariance;
         pageData.pageStats.wholePageRelevantBlockPercentage = wholePageRelevantBlockPercentage;
+        pageData.pageRelevance = totalRelevantLOFScore;
 
         collector.emit(input, new Values(url, content, metadata, pageData));
         collector.ack(input);
-
 
 
 
@@ -224,7 +226,7 @@ public class LOFBolt extends BaseRichBolt {
         String lastPart = parts[parts.length - 1];
         try (Stream<Path> filesStream = Files.list(Paths.get(OUTPUT_FOLDER))) {
             int numFiles = (int) filesStream.filter(Files::isRegularFile).count();
-
+            
             filename = OUTPUT_FOLDER + "document_" + (numFiles+1) + ".txt";
         } catch (Exception e)
         {
@@ -244,8 +246,13 @@ public class LOFBolt extends BaseRichBolt {
         String pagePrediction = responseJson.getString("prediction"); 
         String pageOutlierfactor = responseJson.getString("lof_score");
 
-        try (PrintWriter writer = new PrintWriter(new FileWriter(filename.replace(".txt", "") + "_" + pageIsRelevant.toString() + "_"+ lastPart +".txt"))) 
+        try 
         {
+            if (false)
+            {
+                throw new IOException();
+            }
+            PrintWriter writer = new PrintWriter(new FileWriter(filename.replace(".txt", "") + "_" + pageIsRelevant.toString() + "_"+ lastPart +".txt"));
             writer.println("Whole Page Prediction: " + pagePrediction + "; score: " + pageOutlierfactor + "; URL: "+url);
             for (int i = 0; i < predictions.size(); i++)
             {
@@ -266,6 +273,8 @@ public class LOFBolt extends BaseRichBolt {
             writer.println("Sum of all scores: " + Float.toString(wholePageLOFSum));
             writer.println("Average of scores: " + Float.toString(wholePageLOFMean));
             writer.println("Variance of scores: " + Float.toString(wholePageLOFVariance));
+
+            writer.close();
         }
         catch (IOException e) 
         {

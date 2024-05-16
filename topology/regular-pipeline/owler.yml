@@ -114,6 +114,12 @@ config:
     - warc-filename
     - owseu.onDemandCrawl
 
+  metadata.transfer:
+    - depth
+    - url.path
+    - maxLinkDepth
+    - parentRelevance
+
   # lists the metadata to store in the WARC files
   warc.metadata:
     - curlieLabel

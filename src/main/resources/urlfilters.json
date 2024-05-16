@@ -42,6 +42,13 @@
 		{
 			"class": "eu.ows.owler.filtering.GzippedSitemapFilter",
 			"name": "GzippedSitemapFilter"
+		},
+		{
+			"class": "eu.ows.owler.filtering.DenylistFilter",
+			"name": "DenylistFilter",
+			"params": {
+				"denylistFileName": "/resources/curlie.csv"
+			}
 		}
 	]
 }

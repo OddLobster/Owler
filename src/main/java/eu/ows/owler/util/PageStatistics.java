@@ -38,6 +38,4 @@ public class PageStatistics {
     // etc...
     // Use this to train additional classifier?
     // Or use decision trees to identify relevant threshold cutoffs
-
-
 }
