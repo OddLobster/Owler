@@ -1,6 +1,7 @@
 version: "3.6"
 
 services:
+
   frontier:
     networks:
       - frue_ra_storm_network
@@ -120,6 +121,7 @@ services:
       - storm-nimbus
       - frontier
       - lof-service
+      - redis
     networks:
       - frue_ra_storm_network
     volumes:
@@ -143,7 +145,14 @@ services:
     ports:
       - 43044:43044
 
-
+  redis:
+    image: redis:latest
+    container_name: frue_ra_redis
+    networks:
+      - frue_ra_storm_network
+    ports:
+      - 6379:6379
+    restart: always
 
 networks:
   frue_ra_storm_network:

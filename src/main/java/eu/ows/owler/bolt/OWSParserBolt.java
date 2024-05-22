@@ -24,6 +24,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,7 +50,7 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.DocumentFragment;
-
+import eu.ows.owler.util.URLCache;
 
 public class OWSParserBolt extends BaseRichBolt {
 
@@ -60,6 +63,9 @@ public class OWSParserBolt extends BaseRichBolt {
     private boolean emitOutlinks = true;
     private int maxOutlinksPerPage = -1;
     private String protocolMDprefix;
+    private URLCache urlCache;
+    private static final String AS_IS_NEXTFETCHDATE_METADATA = "status.store.as.is.with.nextfetchdate";
+
 
     @Override
     public void prepare(
@@ -71,6 +77,9 @@ public class OWSParserBolt extends BaseRichBolt {
         emitOutlinks = ConfUtils.getBoolean(conf, "parser.emitOutlinks", true);
         maxOutlinksPerPage = ConfUtils.getInt(conf, "parser.emitOutlinks.max.per.page", -1);
         protocolMDprefix = ConfUtils.getString(conf, ProtocolResponse.PROTOCOL_MD_PREFIX_PARAM, "");
+        String redisHost = ConfUtils.getString(conf, "redis.host", "frue_ra_redis");
+        int redisPort = ConfUtils.getInt(conf, "redis.port", 6379);
+        urlCache = new URLCache(redisHost, redisPort);
     }
 
     @Override
@@ -82,6 +91,19 @@ public class OWSParserBolt extends BaseRichBolt {
         {
             metadata.setValue("maxLinkDepth", "1");
         }
+
+        if (urlCache.isUrlCrawled(urlString))
+        {
+            LOG.info("URL {} already processed", urlString);
+            Instant timeNow = Instant.now();
+            Instant nextFetchTime = timeNow.plus(365, ChronoUnit.DAYS);
+            String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(nextFetchTime);
+            metadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
+            collector.emit(StatusStreamName, tuple, new Values(tuple, metadata, Status.FETCHED)); 
+            collector.ack(tuple);        
+            return;
+        }
+
 
         LOG.info("Parsing started for {}", urlString);
 

@@ -20,9 +20,12 @@ import org.slf4j.LoggerFactory;
 import java.util.Random;
 import org.apache.storm.tuple.Values;
 import eu.ows.owler.util.PageData;
+import eu.ows.owler.util.URLCache;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+
+import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.MetadataTransfer;
 import com.digitalpebble.stormcrawler.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
@@ -37,24 +40,27 @@ public class ClassificationBolt extends BaseRichBolt {
     private Random rand;
     private static final String AS_IS_NEXTFETCHDATE_METADATA = "status.store.as.is.with.nextfetchdate";
     private MetadataTransfer mdTransfer;
+    private URLCache urlCache;
 
     private static final double MIN_RELEVANCE = -1.0;
     private static final double MAX_RELEVANCE = 1.0;
     private static final int MAX_SECONDS = 1000000;
     private static final double PARENT_INFLUENCE_FACTOR = 0.3;
+    private int highest_lof_score = 0;
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(new Fields("url", "content", "metadata", "pageData"));
         declarer.declareStream(StatusStreamName, new Fields("url", "metadata", "status"));
-
     }
 
     @Override
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         this.collector = collector;
         mdTransfer = MetadataTransfer.getInstance(stormConf);
-
+        String redisHost = ConfUtils.getString(stormConf, "redis.host", "frue_ra_redis");
+        int redisPort = ConfUtils.getInt(stormConf, "redis.port", 6379);
+        urlCache = new URLCache(redisHost, redisPort);
     }
 
     @Override
@@ -68,7 +74,6 @@ public class ClassificationBolt extends BaseRichBolt {
 
 
         Boolean pageIsRelevant = false;
-
         if (pageData.pageStats.wholePageRelevantBlockPercentage > 0)
         {
             pageIsRelevant = true;
@@ -103,11 +108,10 @@ public class ClassificationBolt extends BaseRichBolt {
                 {   
                     String childUrl = pageData.blockLinks.get(i).get(j);
                     double pageBlockLinkRelevance = (pageData.pageRelevance * PARENT_INFLUENCE_FACTOR) + pageData.pageStats.pageBlockOutlierScores.get(i);
-                    long mappedSeconds = Math.round((1 + (MAX_SECONDS - 1) * (1 - (pageBlockLinkRelevance - MIN_RELEVANCE) / (MAX_RELEVANCE - MIN_RELEVANCE))));
+                    LOG.info("PageBlockRelevance: {} | PageBlockLinkRelevance: {}", pageData.pageStats.pageBlockOutlierScores.get(i), pageBlockLinkRelevance);
                     
-                    Instant timeNow = Instant.ofEpochSecond(mappedSeconds);
-                    String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(timeNow);
-                    LOG.info("CHILD URL IS RELEVANT: {} | nextFetchDate: {} | mappedSecond: {}", pageBlockLinkRelevance, nextFetchDate, mappedSeconds);
+                    long mappedSeconds = Math.round((1 + (MAX_SECONDS - 1) * (1 - (pageBlockLinkRelevance - MIN_RELEVANCE) / (MAX_RELEVANCE - MIN_RELEVANCE))));
+
                     Metadata newMetadata = new Metadata();
                     try
                     {
@@ -125,31 +129,41 @@ public class ClassificationBolt extends BaseRichBolt {
                             // decrement maxLinkDepth
                             int linkDepth = Integer.valueOf(newMetadata.getFirstValue("maxLinkDepth"));
                             linkDepth -= 1;
+
                             if (linkDepth == -1)
                             {
-                                collector.emit(Constants.StatusStreamName, input, new Values(url, metadata, Status.FETCHED));   
+                                Instant timeNow = Instant.now();
+                                Instant nextFetchTime = timeNow.plus(28, ChronoUnit.DAYS);
+                                String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(nextFetchTime);
+                                newMetadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
+
                                 newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
+                                collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
                                 continue;      
                             }
+                            newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
                         }
                     }
-                    String dateInMetadata = newMetadata.getFirstValue(AS_IS_NEXTFETCHDATE_METADATA);
-                    LOG.info("CHILD URL IS RELEVANT: nextFetchDate: {} | mappedSecond: {}", dateInMetadata, mappedSeconds);
+                    if (childUrl == url)
+                    {
+                        continue;
+                    }
+
+                    Instant timeNow = Instant.ofEpochSecond(mappedSeconds);
+                    String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(timeNow);
                     newMetadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
 
                     Outlink outlink = new Outlink(childUrl);
                     outlink.setMetadata(newMetadata);
                     outlinksList.add(childUrl);
 
-                    collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
+                    collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.FETCHED));
                 }
             }
 
-            metadata.setValues("outlinks", outlinksList.toArray(new String[outlinksList.size()]));
+            // metadata.setValues("outlinks", outlinksList.toArray(new String[outlinksList.size()]));
             LOG.info("OUTLINKS FOR URL: {} |\n {} \n@@@@", url, outlinksList.toString());
         }
-
-
         long endTime = System.currentTimeMillis();
 
         LOG.info("ClassificationBolt processing took time {} ms", endTime - startTime);
@@ -161,10 +175,10 @@ public class ClassificationBolt extends BaseRichBolt {
         metadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
         LOG.info("PARENT NEXT FETCH DATE:  {}", nextFetchDate);
 
+        urlCache.setUrlAsCrawled(url);
 
-        collector.emit(Constants.StatusStreamName, input, new Values(url, metadata, Status.FETCHED)); 
+        collector.emit(StatusStreamName, input, new Values(url, metadata, Status.FETCHED)); 
         collector.emit(input, new Values(url, content, metadata, pageData));
         collector.ack(input);
-
     }
 }
