@@ -36,6 +36,8 @@ COPY seeds.txt /crawler/
 COPY entrypoint.sh /crawler/entrypoint.sh
 RUN chmod +x /crawler/entrypoint.sh
 
+COPY entrypoint-ows.sh /crawler/entrypoint-ows.sh
+RUN chmod +x /crawler/entrypoint-ows.sh
 # RUN useradd -m -u $USER_ID -g storm frue_ra  && \
 #     chown -R storm:storm /crawler/
 

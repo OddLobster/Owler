@@ -1,0 +1,152 @@
+version: "3.6"
+
+services:
+  opensearch-node1:
+    image: opensearchproject/opensearch
+    container_name: opensearch-node1
+    environment:
+      - cluster.name=opensearch-cluster
+      - node.name=frontier-opensearch-node1
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - plugins.security.disabled=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms16G -Xmx16G"
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+    ports:
+      - 9201:9201
+    networks:
+      - frue_ra_storm_network
+
+  frontier-opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    container_name: frontier-opensearch-dashboards
+    ports:
+      - 5602:5601
+    expose:
+      - "5601"
+    environment:
+      - 'OPENSEARCH_HOSTS=["http://frontier-opensearch-node1:9201"]'
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
+    networks:
+      - frue_ra_storm_network
+
+  prometheus:
+    image: prom/prometheus 
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      -  ./prometheus:/etc/prometheus
+    command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
+    networks:
+      - frue_ra_storm_network
+
+  frontier-grafana:
+    image: grafana/grafana:8.3.5
+    container_name: frontier-grafana
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/
+    ports:
+      - 3001:3000
+    networks:
+      - frue_ra_storm_network
+
+  # Apache Storm components
+  # - Zookeeper coordinates the communication between Nimbus and the Supervisors
+  zookeeper:
+    networks:
+      - frue_ra_storm_network
+    image: zookeeper:${ZOOKEEPER_VERSION:-3.6.3}
+    container_name: frue_ra_zookeeper
+    ports:
+      - 43004:43004
+    restart: always
+
+  # - the daemon Nimbus runs on the master node
+  storm-nimbus:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-nimbus
+    ## must override worker.childopts and remove options not available
+    ## for Java 11: `-XX:+PrintGCDateStamps`, etc#
+    hostname: nimbus
+    command: storm nimbus
+        -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
+    depends_on:
+      - zookeeper
+    links:
+      - zookeeper
+    ports:
+      - 43003:43003
+    external_links:
+      - zookeeper
+    restart: always
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  # - the Supervisors run on the worker nodes
+  storm-supervisor:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-supervisor
+    ## must override worker.childopts and remove options not available
+    ## for Java 11: `-XX:+PrintGCDateStamps`, etc
+    command: storm supervisor
+        -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
+    depends_on:
+      - zookeeper
+      - storm-nimbus
+    links:
+      - zookeeper
+      - storm-nimbus:nimbus
+    volumes:
+      - ${INPUT:-./input}:/data/input
+      - ${LOGS:-./logs}:/logs
+      - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
+      - ./model:/data/model
+      - ./data/model:/bert/model
+      - ${OUTPUT:-./output}:/outdata
+      - ./src/main/resources/dataset:/resources
+    external_links:
+      - zookeeper
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  # - the Storm UI provides diagnostics about the Storm cluster
+  storm-ui:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-ui
+    command: storm ui
+    depends_on:
+      - storm-nimbus
+    links:
+      - storm-nimbus:nimbus
+    ports:
+      - 43043:43043
+    external_links:
+      - zookeeper
+    restart: always
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  lof-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.lof
+    container_name: frue_ra_lof
+    networks:
+      - frue_ra_storm_network
+    ports:
+      - 43044:43044
+
+networks:
+  frue_ra_storm_network:
+    external: true
+

@@ -1,0 +1,162 @@
+version: "3.6"
+
+services:
+  frontier:
+    build:
+      context: ../opensearch-frontier/
+      dockerfile: Dockerfile
+    container_name: frue_ra_frontier
+    environment:
+      - BACKEND_CLASS=eu.ows.urlfrontier.opensearch.backend.OpensearchBackend
+      - LOGSCONSUMER_CLASS=eu.ows.urlfrontier.logs.DummyLogsConsumer
+      - SERVICE_INTEREST=default
+    ports:
+      - 7071:7071
+      - 9101:9101
+    command: >
+      backend.class=${BACKEND_CLASS}
+      logsconsumer.class=${LOGSCONSUMER_CLASS}
+      opensearch.status.hostname=frontier-opensearch-node1
+      opensearch.status.index=status-experiment
+      cassandra.status.hostname=cassandra-node1
+      service.interest=${SERVICE_INTEREST}
+      -s 9101
+      -p 7071
+    volumes:
+      - ./logs:/urlfrontier/logs
+    depends_on:
+      - opensearch-node1
+    networks:
+      - frue_ra_storm_network
+
+  # Apache Storm components
+  # - Zookeeper coordinates the communication between Nimbus and the Supervisors
+  zookeeper:
+    networks:
+      - frue_ra_storm_network
+    image: zookeeper:${ZOOKEEPER_VERSION:-3.6.3}
+    container_name: frue_ra_zookeeper
+    ports:
+      - 43004:43004
+    restart: always
+
+  # - the daemon Nimbus runs on the master node
+  storm-nimbus:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-nimbus
+    ## must override worker.childopts and remove options not available
+    ## for Java 11: `-XX:+PrintGCDateStamps`, etc#
+    hostname: nimbus
+    command: storm nimbus
+        -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
+    depends_on:
+      - zookeeper
+    links:
+      - zookeeper
+    ports:
+      - 43003:43003
+    external_links:
+      - zookeeper
+    restart: always
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  # - the Supervisors run on the worker nodes
+  storm-supervisor:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-supervisor
+    ## must override worker.childopts and remove options not available
+    ## for Java 11: `-XX:+PrintGCDateStamps`, etc
+    command: storm supervisor
+        -c worker.childopts="-Xmx%HEAP-MEM%m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=artifacts/heapdump"
+    depends_on:
+      - zookeeper
+      - storm-nimbus
+    links:
+      - zookeeper
+      - storm-nimbus:nimbus
+    volumes:
+      - ${INPUT:-./input}:/data/input
+      - ${LOGS:-./logs}:/logs
+      - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
+      - ./model:/data/model
+      - ./data/model:/bert/model
+      - ${OUTPUT:-./output}:/outdata
+      - ./src/main/resources/dataset:/resources
+    external_links:
+      - zookeeper
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  # - the Storm UI provides diagnostics about the Storm cluster
+  storm-ui:
+    networks:
+      - frue_ra_storm_network
+    image: storm:${STORM_VERSION:-2.4.0}
+    container_name: frue_ra_storm-ui
+    command: storm ui
+    depends_on:
+      - storm-nimbus
+    links:
+      - storm-nimbus:nimbus
+    ports:
+      - 43043:43043
+    external_links:
+      - zookeeper
+    restart: always
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  # - to launch a topology
+  # - will exit on startup - not anymore
+  # build owler image: docker build --tag frue_ra_owler:0.1-SNAPSHOT .
+
+  owler:
+    build:
+      context: .
+      dockerfile: Dockerfile.owler
+      args:
+        TAG: frue_ra_owler
+    user: "${MY_UID}:${MY_GID}"
+    container_name: frue_ra_owler
+    depends_on:
+      - storm-nimbus
+      - frontier
+      - lof-service
+    networks:
+      - frue_ra_storm_network
+    volumes:
+      - ${INPUT:-./input}:/data/input
+      - ./external/storm/log4j2:/apache-storm-2.4.0/log4j2
+      - maven-repo:/localdata1/frue_ra/.m2
+      - ./logs:/loginternal
+      - ${OUTPUT:-./output}:/outdata
+      - ./src/main/resources/dataset:/resources
+    restart: "no"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  lof-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.lof
+    container_name: frue_ra_lof
+    networks:
+      - frue_ra_storm_network
+    ports:
+      - 43044:43044
+
+
+networks:
+  frue_ra_storm_network:
+    driver: bridge
+
+volumes:
+  maven-repo:

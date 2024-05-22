@@ -1,0 +1,34 @@
+version: "3.6"
+
+services:
+  urlfrontier-service1:
+    build:
+      context: ../opensearch-frontier/
+      dockerfile: Dockerfile
+    container_name: urlfrontier-service1
+    environment:
+      - BACKEND_CLASS=eu.ows.urlfrontier.opensearch.backend.OpensearchBackend
+      - LOGSCONSUMER_CLASS=eu.ows.urlfrontier.logs.DummyLogsConsumer
+      - SERVICE_INTEREST=default
+    ports:
+      - 7071:7071
+      - 9101:9101
+    command: >
+      backend.class=eu.ows.urlfrontier.opensearch.backend.OpensearchBackend
+      logsconsumer.class=eu.ows.urlfrontier.logs.DummyLogsConsumer
+      opensearch.status.hostname=opensearch-node1
+      opensearch.status.port=9201
+      opensearch.status.index=status-experiment
+      cassandra.status.hostname=cassandra-node1
+      service.interest=default
+      -s 9101
+      -p 7071
+    volumes:
+      - ./logs:/urlfrontier/logs
+    networks:
+      - frue_ra_storm_network
+
+networks:
+  frue_ra_storm_network:
+    external: true
+    

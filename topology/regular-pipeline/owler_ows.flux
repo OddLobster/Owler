@@ -53,10 +53,22 @@ components:
          - "https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.1/"
 
 spouts:
-    - id: "frontierspout"
-      className: "eu.ows.owler.spout.FrontierSpout"
-      parallelism: 1
-      
+   - id: "frontierspout"
+     className: "eu.ows.owler.urlfrontier.OWSSpout.java"
+     parallelism: 1
+
+#    - id: "frontierspout"
+#      className: "eu.ows.owler.spout.FrontierSpout"
+#      parallelism: 1
+
+#  - id: "filespout"
+#    className: "com.digitalpebble.stormcrawler.spout.FileSpout"
+#    parallelism: 1
+#    constructorArgs:
+#      - ${eu.ows.owler.spouts.input}
+#      - ${eu.ows.owler.filespout.seeds}
+#      - false
+
 bolts:
   - id: "fetcher"
     className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
@@ -69,7 +81,7 @@ bolts:
     parallelism: 1
   - id: "embedder"
     className: "eu.ows.owler.bolt.EmbeddingBolt"
-    parallelism: 2
+    parallelism: 4
   - id: "classifier"
     className: "eu.ows.owler.bolt.ClassificationBolt"
     parallelism: 1

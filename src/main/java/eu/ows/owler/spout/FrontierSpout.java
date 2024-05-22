@@ -141,7 +141,6 @@ public class FrontierSpout extends AbstractQueryingSpout {
 
                     @Override
                     public void onNext(URLInfo item) {
-                        LOG.debug("OnNext called");
                         Metadata m = new Metadata();
                         item.getMetadataMap()
                                 .forEach(
@@ -153,7 +152,6 @@ public class FrontierSpout extends AbstractQueryingSpout {
                                             }
                                         });
                         buffer.add(item.getUrl(), m, item.getKey());
-                        LOG.debug("OnNext finished");
                         counter.addAndGet(1);
                     }
 
@@ -175,7 +173,6 @@ public class FrontierSpout extends AbstractQueryingSpout {
                         } else {
                             LOG.error("Exception caught: ", t);
                         }
-                        LOG.debug("OnError finished calling");
                         markQueryReceivedNow();
                     }
 

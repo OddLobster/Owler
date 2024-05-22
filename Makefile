@@ -20,4 +20,21 @@ exec:
 	MY_UID=$$(id -u) MY_GID=$$(id -g) docker-compose -f docker-compose.yml up -d --build --renew-anon-volumes 
 
 format:
-	mvn com.cosium.code:git-code-format-maven-plugin:4.2:format-code
+	mvn com.cosium.code:git-code-format-maven-plugin:format-code
+
+run_ows:
+	mvn clean install -DskipTests -T 24
+	docker-compose -f docker-compose-owsdefault.yml up -d --build --renew-anon-volumes
+	sleep 60
+	docker-compose -f docker-compose-frontier-service.yml up -d --build --renew-anon-volumes
+
+exec_ows:
+	docker-compose -f docker-compose-owsdefault.yml up -d --build --renew-anon-volumes
+	sleep 60
+	docker-compose -f docker-compose-frontier-service.yml up -d --build --renew-anon-volumes
+	sleep 60
+	docker-compose -f docker-compose-owler.yml up -d --build --renew-anon-volumes
+
+cleanup:
+	docker-compose -f docker-compose-frontier-service.yml down
+	docker-compose -f docker-compose-owsdefault.yml down

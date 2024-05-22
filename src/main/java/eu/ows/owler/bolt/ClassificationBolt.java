@@ -3,6 +3,7 @@ package eu.ows.owler.bolt;
 import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ import eu.ows.owler.util.PageData;
 import java.net.MalformedURLException;
 import java.net.URL;
 import com.digitalpebble.stormcrawler.util.MetadataTransfer;
-
+import com.digitalpebble.stormcrawler.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.parse.Outlink;
 import com.digitalpebble.stormcrawler.persistence.Status;
@@ -98,15 +99,9 @@ public class ClassificationBolt extends BaseRichBolt {
             List<String> outlinksList = new ArrayList<>();
             for (int i = 0; i < pageData.blockLinks.size(); i++)
             {
-                if (pageData.pageBlockRelevance.get(i) == false)
-                {
-                    // continue;
-                }
-
                 for (int j = 0; j < pageData.blockLinks.get(i).size(); j++)
                 {   
                     String childUrl = pageData.blockLinks.get(i).get(j);
-                    outlinksList.add(childUrl);
                     double pageBlockLinkRelevance = (pageData.pageRelevance * PARENT_INFLUENCE_FACTOR) + pageData.pageStats.pageBlockOutlierScores.get(i);
                     long mappedSeconds = Math.round((1 + (MAX_SECONDS - 1) * (1 - (pageBlockLinkRelevance - MIN_RELEVANCE) / (MAX_RELEVANCE - MIN_RELEVANCE))));
                     
@@ -130,14 +125,22 @@ public class ClassificationBolt extends BaseRichBolt {
                             // decrement maxLinkDepth
                             int linkDepth = Integer.valueOf(newMetadata.getFirstValue("maxLinkDepth"));
                             linkDepth -= 1;
-                            newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
+                            if (linkDepth == -1)
+                            {
+                                collector.emit(Constants.StatusStreamName, input, new Values(url, metadata, Status.FETCHED));   
+                                newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
+                                continue;      
+                            }
                         }
-                    } 
-                    
+                    }
+                    String dateInMetadata = newMetadata.getFirstValue(AS_IS_NEXTFETCHDATE_METADATA);
+                    LOG.info("CHILD URL IS RELEVANT: nextFetchDate: {} | mappedSecond: {}", dateInMetadata, mappedSeconds);
                     newMetadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
 
                     Outlink outlink = new Outlink(childUrl);
                     outlink.setMetadata(newMetadata);
+                    outlinksList.add(childUrl);
+
                     collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
                 }
             }
@@ -150,8 +153,18 @@ public class ClassificationBolt extends BaseRichBolt {
         long endTime = System.currentTimeMillis();
 
         LOG.info("ClassificationBolt processing took time {} ms", endTime - startTime);
-        LOG.info("Metadata for {} is {}", url, metadata);
+        LOG.info("Metadata for {} is \n{}", url, metadata);
+        
+        Instant timeNow = Instant.now();
+        Instant nextFetchTime = timeNow.plus(14, ChronoUnit.DAYS);
+        String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(nextFetchTime);
+        metadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
+        LOG.info("PARENT NEXT FETCH DATE:  {}", nextFetchDate);
+
+
+        collector.emit(Constants.StatusStreamName, input, new Values(url, metadata, Status.FETCHED)); 
         collector.emit(input, new Values(url, content, metadata, pageData));
         collector.ack(input);
+
     }
 }

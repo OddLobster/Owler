@@ -421,16 +421,16 @@
 		</dependency>
 
 
-		<!-- <dependency>
-			<groupId>eu.ows</groupId>
-			<artifactId>urlfrontier-core</artifactId>
-			<version>0.2-SNAPSHOT</version>
-		</dependency>
 		<dependency>
 			<groupId>eu.ows</groupId>
 			<artifactId>urlfrontier-API</artifactId>
-			<version>0.2-SNAPSHOT</version>
-		</dependency> -->
+			<version>0.3-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>eu.ows</groupId>
+			<artifactId>urlfrontier-core</artifactId>
+			<version>0.3-SNAPSHOT</version>
+		</dependency>
 
 
  </dependencies>
