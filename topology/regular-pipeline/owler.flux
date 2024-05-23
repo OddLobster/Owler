@@ -59,23 +59,26 @@ spouts:
       
 bolts:
   - id: "fetcher"
-    className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
+    className: "eu.ows.owler.bolt.FetcherBolt"
     parallelism: 1
+#  - id: "fetcher"
+#    className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
+#    parallelism: 1
   - id: "parser"
     className: "eu.ows.owler.bolt.OWSParserBolt"
-    parallelism: 4
+    parallelism: 1
   - id: "segmenter"
     className: "eu.ows.owler.bolt.PageSegmentBolt"
     parallelism: 1
   - id: "embedder"
     className: "eu.ows.owler.bolt.EmbeddingBolt"
-    parallelism: 2
+    parallelism: 1
   - id: "classifier"
     className: "eu.ows.owler.bolt.ClassificationBolt"
     parallelism: 1
   - id: "lof"
     className: "eu.ows.owler.bolt.LOFBolt"
-    parallelism: 2
+    parallelism: 1
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
     parallelism: 1
@@ -169,7 +172,7 @@ streams:
       args: ["url"]
       streamId: "status"
 
-  - from: "classifier"
+  - from: "embedder"
     to: "status_frontier"
     grouping:
       type: FIELDS
@@ -184,6 +187,13 @@ streams:
       streamId: "status"
 
   - from: "tika"
+    to: "status_frontier"
+    grouping:
+      type: FIELDS
+      args: ["url"]
+      streamId: "status"
+
+  - from: "classifier"
     to: "status_frontier"
     grouping:
       type: FIELDS

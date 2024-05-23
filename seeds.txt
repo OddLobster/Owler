@@ -1,1 +1,6 @@
 https://en.wikipedia.org/wiki/Earth_observation_satellite
+https://en.wikipedia.org/wiki/Remote_sensing
+https://en.wikipedia.org/wiki/Landsat_program
+https://en.wikipedia.org/wiki/Copernicus_Programme
+https://en.wikipedia.org/wiki/MODIS
+https://en.wikipedia.org/wiki/Weather_satellite

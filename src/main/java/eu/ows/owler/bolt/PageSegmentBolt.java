@@ -147,7 +147,8 @@ public class PageSegmentBolt extends BaseRichBolt {
                     linksInBlock.add(URLUtil.resolveURL(new URL(url), links.get(linkIndex)).toString());
                 } catch (MalformedURLException e)
                 {
-                    LOG.info("MALFORMED URL EXCEPTION IN PAGE SEGMENT: {}", e);
+                    LOG.info("MALFORMED URL EXCEPTION IN PAGE SEGMENT: {}", url);
+                    LOG.info("EXECPTION: {}", url);
                 }
                 // linksInBlock.add(links.get(linkIndex));
                 String anchorText = anchorTexts.get(linkIndex);

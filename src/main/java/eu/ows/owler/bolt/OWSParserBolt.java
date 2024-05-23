@@ -91,17 +91,24 @@ public class OWSParserBolt extends BaseRichBolt {
         {
             metadata.setValue("maxLinkDepth", "1");
         }
-
-        if (urlCache.isUrlCrawled(urlString))
+        if(urlCache.isUrlCrawled(urlString))
         {
-            LOG.info("URL {} already processed", urlString);
             Instant timeNow = Instant.now();
             Instant nextFetchTime = timeNow.plus(365, ChronoUnit.DAYS);
             String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(nextFetchTime);
             metadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
             collector.emit(StatusStreamName, tuple, new Values(tuple, metadata, Status.FETCHED)); 
             collector.ack(tuple);        
+            LOG.info("Already crawled: {}, nextFetchDate: {}", urlString, nextFetchDate);
             return;
+        }
+        if (urlCache.setUrlAsCrawled(urlString))
+        {
+            LOG.info("SET URL: {} AS CRAWLED. SHOULDNT PROCESS IN THE FUTURE", urlString);
+        }
+        else
+        {
+            LOG.info("Failed to set url as crawled: {}", urlString);
         }
 
 

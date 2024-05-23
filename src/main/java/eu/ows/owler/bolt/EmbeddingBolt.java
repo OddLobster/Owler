@@ -1,4 +1,6 @@
 package eu.ows.owler.bolt;
+import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
+import com.digitalpebble.stormcrawler.persistence.Status;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -20,6 +22,7 @@ import org.apache.storm.tuple.Values;
 import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
 
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -28,6 +31,12 @@ import org.nd4j.onnxruntime.runner.OnnxRuntimeRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import de.l3s.boilerpipe.document.TextBlock;
+import eu.ows.owler.util.URLCache;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.format.DateTimeFormatter;
+
 
 import com.ankit.bert.tokenizerimpl.BertTokenizer;
 
@@ -41,10 +50,13 @@ public class EmbeddingBolt extends BaseRichBolt {
     private OnnxRuntimeRunner runner;
     private Map<String, Integer> vocabulary;
     private int max_embedding_length = 512;
+    private URLCache urlCache;
+    private static final String AS_IS_NEXTFETCHDATE_METADATA = "status.store.as.is.with.nextfetchdate";
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(new Fields("url", "content", "metadata", "pageData"));
+        declarer.declareStream(StatusStreamName, new Fields("url", "metadata", "status"));
     }
 
     @Override
@@ -65,7 +77,11 @@ public class EmbeddingBolt extends BaseRichBolt {
         } catch (NumberFormatException | IOException e) {
             e.printStackTrace();
         }
-        
+
+        String redisHost = ConfUtils.getString(stormConf, "redis.host", "frue_ra_redis");
+        int redisPort = ConfUtils.getInt(stormConf, "redis.port", 6379);
+        urlCache = new URLCache(redisHost, redisPort);
+
     }
 
     private INDArray tokenizeText(String text, int max_length)
@@ -132,7 +148,18 @@ public class EmbeddingBolt extends BaseRichBolt {
 
         LOG.info("Called EmbeddingBolt for {}", url);
         List<double[]> blockEmbeddings = new ArrayList<>();
-        
+        if(urlCache.isUrlCrawled(url))
+        {
+            Instant timeNow = Instant.now();
+            Instant nextFetchTime = timeNow.plus(365, ChronoUnit.DAYS);
+            String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(nextFetchTime);
+            metadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
+            collector.emit(StatusStreamName, input, new Values(input, metadata, Status.FETCHED)); 
+            collector.ack(input);        
+            LOG.info("Already crawled: {}, nextFetchDate: {}", url, nextFetchDate);
+            return;
+        }
+
         // create embedding for each block
         for (int i = 0; i < blocks.size(); i++)
         {

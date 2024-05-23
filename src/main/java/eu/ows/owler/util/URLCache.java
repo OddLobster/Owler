@@ -12,13 +12,19 @@ public class URLCache {
     }
 
     public boolean isUrlCrawled(String url) {
-        boolean isCrawled = jedis.sismember("crawled_urls", url);
+        boolean isCrawled = jedis.exists("crawled:" + url);
         LOG.info("Checking URL {} - Crawled: {}", url, isCrawled);
         return isCrawled;
     }
 
-    public void setUrlAsCrawled(String url) {
-        jedis.sadd("crawled_urls", url);
-        LOG.info("URL {} set as crawled", url);
+    public boolean setUrlAsCrawled(String url) {
+        boolean wasSet = jedis.setnx("crawled:" + url, "true") == 1;
+        if (wasSet) {
+            jedis.sadd("crawled_urls", url);
+            LOG.info("URL {} set as crawled", url);
+        } else {
+            LOG.info("URL {} was already set as crawled", url);
+        }
+        return wasSet;
     }
 }
