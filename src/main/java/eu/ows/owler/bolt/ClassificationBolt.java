@@ -158,7 +158,7 @@ public class ClassificationBolt extends BaseRichBolt {
                         outlink.setMetadata(newMetadata);
                         outlinksList.add(childUrl);
                         
-                        collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
+                        collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.FETCHED));
                     }
                 }
             }
@@ -170,12 +170,9 @@ public class ClassificationBolt extends BaseRichBolt {
 
         LOG.info("ClassificationBolt processing took time {} ms", endTime - startTime);
         LOG.info("Metadata for {} is \n{}", url, metadata);
-        
-        Instant timeNow = Instant.now();
-        Instant nextFetchTime = timeNow.plus(14, ChronoUnit.DAYS);
-        String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(nextFetchTime);
-        metadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
-        LOG.info("PARENT NEXT FETCH DATE:  {}", nextFetchDate);
+
+        // refetchable_from_date=0 indicates this url is done with processing and shouldnt be processed in the future
+        metadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
 
 
         collector.emit(StatusStreamName, input, new Values(url, metadata, Status.FETCHED)); 

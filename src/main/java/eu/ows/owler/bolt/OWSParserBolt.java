@@ -93,13 +93,10 @@ public class OWSParserBolt extends BaseRichBolt {
         }
         if(urlCache.isUrlCrawled(urlString))
         {
-            Instant timeNow = Instant.now();
-            Instant nextFetchTime = timeNow.plus(365, ChronoUnit.DAYS);
-            String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(nextFetchTime);
-            metadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
+            metadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
             collector.emit(StatusStreamName, tuple, new Values(tuple, metadata, Status.FETCHED)); 
             collector.ack(tuple);        
-            LOG.info("Already crawled: {}, nextFetchDate: {}", urlString, nextFetchDate);
+            LOG.info("Already crawled: {}, nextFetchDate: {}", urlString);
             return;
         }
         if (urlCache.setUrlAsCrawled(urlString))
@@ -110,7 +107,6 @@ public class OWSParserBolt extends BaseRichBolt {
         {
             LOG.info("Failed to set url as crawled: {}", urlString);
         }
-
 
         LOG.info("Parsing started for {}", urlString);
 

@@ -66,19 +66,19 @@ bolts:
 #    parallelism: 1
   - id: "parser"
     className: "eu.ows.owler.bolt.OWSParserBolt"
-    parallelism: 1
+    parallelism: 2
   - id: "segmenter"
     className: "eu.ows.owler.bolt.PageSegmentBolt"
     parallelism: 1
   - id: "embedder"
     className: "eu.ows.owler.bolt.EmbeddingBolt"
-    parallelism: 1
+    parallelism: 4
   - id: "classifier"
     className: "eu.ows.owler.bolt.ClassificationBolt"
     parallelism: 1
   - id: "lof"
     className: "eu.ows.owler.bolt.LOFBolt"
-    parallelism: 1
+    parallelism: 2
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
     parallelism: 1
