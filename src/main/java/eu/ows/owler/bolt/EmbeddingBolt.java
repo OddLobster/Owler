@@ -148,17 +148,19 @@ public class EmbeddingBolt extends BaseRichBolt {
 
         LOG.info("Called EmbeddingBolt for {}", url);
         List<double[]> blockEmbeddings = new ArrayList<>();
-        if(urlCache.isUrlCrawled(url))
+        
+        if(urlCache.isUrlEmbedded(url))
         {
             Instant timeNow = Instant.now();
             Instant nextFetchTime = timeNow.plus(365, ChronoUnit.DAYS);
             String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(nextFetchTime);
             metadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
-            collector.emit(StatusStreamName, input, new Values(input, metadata, Status.FETCHED)); 
+            collector.emit(StatusStreamName, input, new Values(url, metadata, Status.FETCHED)); 
             collector.ack(input);        
-            LOG.info("Already crawled: {}, nextFetchDate: {}", url, nextFetchDate);
+            LOG.info("Already embedded: {}, nextFetchDate: {}", url, nextFetchDate);
             return;
         }
+        urlCache.setUrlAsEmbedded(url);
 
         // create embedding for each block
         for (int i = 0; i < blocks.size(); i++)

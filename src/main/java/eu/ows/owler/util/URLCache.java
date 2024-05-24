@@ -27,4 +27,22 @@ public class URLCache {
         }
         return wasSet;
     }
+
+    public boolean isUrlEmbedded(String url) {
+        boolean isEmbedded = jedis.exists("embedded:" + url);
+        LOG.info("Checking URL {} - Embedded: {}", url, isEmbedded);
+        return isEmbedded;
+    }
+
+    public boolean setUrlAsEmbedded(String url) {
+        boolean wasSet = jedis.setnx("embedded:" + url, "true") == 1;
+        if (wasSet) {
+            jedis.sadd("embedded_urls", url);
+            LOG.info("URL {} set as embedded", url);
+        } else {
+            LOG.info("URL {} was already set as embedded", url);
+        }
+        return wasSet;
+    }
+
 }
