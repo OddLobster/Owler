@@ -50,6 +50,8 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.TupleUtils;
 import org.apache.storm.utils.Utils;
+import org.openqa.selenium.net.UrlChecker;
+
 import com.digitalpebble.stormcrawler.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.Status;
@@ -63,6 +65,8 @@ import com.digitalpebble.stormcrawler.util.PerSecondReducer;
 import org.slf4j.LoggerFactory;
 import com.digitalpebble.stormcrawler.bolt.StatusEmitterBolt;
 import com.digitalpebble.stormcrawler.bolt.SiteMapParserBolt;
+import eu.ows.owler.util.URLCache;
+
 
 /**
  * A multithreaded, queue-based fetcher adapted from Apache Nutch. Enforces the politeness and
@@ -114,6 +118,7 @@ public class FetcherBolt extends StatusEmitterBolt {
     private int maxNumberURLsInQueues = -1;
 
     private String[] beingFetched;
+    private URLCache urlCache;
 
     @Override
     public Map<String, Object> getComponentConfiguration() {
@@ -909,6 +914,9 @@ public class FetcherBolt extends StatusEmitterBolt {
                             debugfiletriggerpattern.replaceAll(
                                     "\\{port\\}", Integer.toString(context.getThisWorkerPort())));
         }
+        String redisHost = ConfUtils.getString(conf, "redis.host", "frue_ra_redis");
+        int redisPort = ConfUtils.getInt(conf, "redis.port", 6379);
+        urlCache = new URLCache(redisHost, redisPort);
     }
 
     @Override
@@ -960,6 +968,33 @@ public class FetcherBolt extends StatusEmitterBolt {
             // ignore silently
             collector.ack(input);
             return;
+        }
+
+        if(urlCache.isUrlCrawled(urlString))
+        {
+            String AS_IS_NEXTFETCHDATE_METADATA = "status.store.as.is.with.nextfetchdate";
+
+            Metadata metadata = (Metadata) input.getValueByField("metadata");
+            if (metadata == null) {
+                metadata = new Metadata();
+            }
+            // Report to status stream and ack
+            metadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
+            collector.emit(
+                    Constants.StatusStreamName,
+                    input,
+                    new Values(urlString, metadata, Status.FETCHED));
+            collector.ack(input);        
+            LOG.info("FETCHERBOLT: Already crawled: {}, nextFetchDate: {}", urlString);
+            return;
+        }
+        if (urlCache.setUrlAsCrawled(urlString))
+        {
+            LOG.info("SET URL: {} AS CRAWLED. SHOULDNT PROCESS IN THE FUTURE", urlString);
+        }
+        else
+        {
+            LOG.info("Failed to set url as crawled: {}", urlString);
         }
 
         LOG.debug("Received in Fetcher {}", urlString);
