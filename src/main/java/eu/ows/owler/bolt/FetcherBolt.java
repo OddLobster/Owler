@@ -996,6 +996,7 @@ public class FetcherBolt extends StatusEmitterBolt {
         {
             LOG.info("Failed to set url as crawled: {}", urlString);
         }
+        
 
         LOG.debug("Received in Fetcher {}", urlString);
 

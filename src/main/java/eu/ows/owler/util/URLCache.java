@@ -22,14 +22,31 @@ public class URLCache {
     }
 
     public boolean isUrlCrawled(String url) {
-        String normalizedUrl = normalizeUrl(url);
+        String normalizedUrl = "";
+        try
+        {
+            normalizedUrl = normalizeUrl(url);
+        } catch (URISyntaxException e)
+        {
+            LOG.info("isUrlCrawled URI syntax exception", e);
+            return false;
+        }
+
         boolean isCrawled = jedis.exists("crawled:" + normalizedUrl);
         LOG.info("Checking URL {} - Crawled: {} - NORMALIZED: {}", url, isCrawled, normalizedUrl);
         return isCrawled;
     }
 
     public boolean setUrlAsCrawled(String url) {
-        String normalizedUrl = normalizeUrl(url);
+        String normalizedUrl = "";
+        try 
+        {
+            normalizedUrl = normalizeUrl(url);
+        } catch (URISyntaxException e)
+        {
+            LOG.info("setUrlAsCrawled URI syntax exception", e);
+            return false;
+        }
 
         boolean wasSet = jedis.setnx("crawled:" + normalizedUrl, "true") == 1;
         if (wasSet) {
@@ -42,7 +59,15 @@ public class URLCache {
     }
 
     public boolean isUrlEmbedded(String url) {
-        String normalizedUrl = normalizeUrl(url);
+        String normalizedUrl = "";
+        try
+        {
+            normalizedUrl = normalizeUrl(url);
+        } catch (URISyntaxException e)
+        {
+            LOG.info("isUrlEmbedded URI syntax exception", e);
+            return false;
+        }
 
         boolean isEmbedded = jedis.exists("embedded:" + normalizedUrl);
         LOG.info("Checking URL {} - Embedded: {}", normalizedUrl, isEmbedded);
@@ -50,8 +75,16 @@ public class URLCache {
     }
 
     public boolean setUrlAsEmbedded(String url) {
-        String normalizedUrl = normalizeUrl(url);
-
+        String normalizedUrl = "";
+        try
+        {
+            normalizedUrl = normalizeUrl(url);
+        } catch (URISyntaxException e)
+        {
+            LOG.info("setUrlAsEmbedded URI syntax exception", e);
+            return false;
+        }
+        
         boolean wasSet = jedis.setnx("embedded:" + normalizedUrl, "true") == 1;
         if (wasSet) {
             jedis.sadd("embedded_urls", normalizedUrl);

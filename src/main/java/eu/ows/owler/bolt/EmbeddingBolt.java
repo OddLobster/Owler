@@ -165,7 +165,6 @@ public class EmbeddingBolt extends BaseRichBolt {
             String text = blockTexts.get(i);
             INDArray tokenized_text = tokenizeText(text, max_embedding_length);
             INDArray attention_mask = createAttentionMask(tokenized_text);
-            
             Map<String, INDArray> inputs = new LinkedHashMap<>();
             inputs.put("input_ids", tokenized_text);
             inputs.put("attention_mask", attention_mask);
@@ -174,9 +173,9 @@ public class EmbeddingBolt extends BaseRichBolt {
             INDArray value = output.get("output");
             INDArray meanEmbedding = value.mean(1);
             double[] embedding = meanEmbedding.data().asDouble();
+            LOG.info("EMBEDDING: ", embedding.toString());
             // writeEmbeddingToFile(embedding, "/outdata/dummy_embedding_"+i+".txt");
             blockEmbeddings.add(embedding);
-
         }
 
         // create embedding for whole web page

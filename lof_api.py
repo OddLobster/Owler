@@ -10,10 +10,12 @@ def get_bert_embeddings(embedding_file=None):
         embeddings = []
         for key in hdf5_file.keys():
             embeddings.append(np.array(hdf5_file[key]))
+
         try:
             embeddings = np.array(embeddings).squeeze(1)
         except:
             embeddings = np.array(embeddings)
+
     return embeddings
 
 class LOF:
@@ -26,7 +28,9 @@ class LOF:
 
     def predict(self, document_embedding):
         document_embedding = np.array(document_embedding)
+        print("document embedding shape", document_embedding.shape)
         prediction = self.lof_model.predict([document_embedding])[0]
+        print("prediction", prediction)
         lof_score = self.lof_model.decision_function([document_embedding])[0]
         return str(prediction), str(lof_score)
 

@@ -19,6 +19,7 @@ public class FocusedScheduler extends Scheduler {
     public int fetchErrorFetchInterval;
     public int errorFetchInterval;
     private HashMap<String, Float> scores;
+    private static final String AS_IS_NEXTFETCHDATE_METADATA = "status.store.as.is.with.nextfetchdate";
 
     @Override
     protected void init(Map<String, Object> stormConf) {
@@ -40,6 +41,9 @@ public class FocusedScheduler extends Scheduler {
             case FETCHED:
                 minutesIncrement = -1;
                 break;
+            case DISCOVERED:
+                AS_IS_NEXTFETCHDATE_METADATA
+            
             case FETCH_ERROR:
                 minutesIncrement = fetchErrorFetchInterval;
                 break;

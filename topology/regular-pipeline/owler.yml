@@ -27,7 +27,7 @@ config:
   fetchInterval.error: -1
 
   # Scheduler class for the assignment of the nextFetchDate
-  scheduler.class: "com.digitalpebble.stormcrawler.persistence.AdaptiveScheduler"
+  scheduler.class: "eu.ows.owler.persistence.FocusedScheduler"
 
   # exact counts, no sampled metrics
   topology.stats.sample.rate: 1.0

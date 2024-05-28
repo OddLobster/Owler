@@ -99,14 +99,14 @@ public class OWSParserBolt extends BaseRichBolt {
         //     LOG.info("Already crawled: {}, nextFetchDate: {}", urlString);
         //     return;
         // }
-        if (urlCache.setUrlAsCrawled(urlString))
-        {
-            LOG.info("SET URL: {} AS CRAWLED. SHOULDNT PROCESS IN THE FUTURE", urlString);
-        }
-        else
-        {
-            LOG.info("Failed to set url as crawled: {}", urlString);
-        }
+        // if (urlCache.setUrlAsCrawled(urlString))
+        // {
+        //     LOG.info("SET URL: {} AS CRAWLED. SHOULDNT PROCESS IN THE FUTURE", urlString);
+        // }
+        // else
+        // {
+        //     LOG.info("Failed to set url as crawled: {}", urlString);
+        // }
 
         LOG.info("Parsing started for {}", urlString);
 
@@ -129,7 +129,6 @@ public class OWSParserBolt extends BaseRichBolt {
                 } else if (mimeType.toLowerCase().contains("json")) {
                     metadata.setValue("isJSON", "true");
                 }
-
                 LOG.info("URL {} has unsupported mimetype {}", url, mimeType);
                 collector.emit(tuple, new Values(urlString, content, metadata, ""));
                 collector.ack(tuple);

@@ -1,8 +1,1 @@
-http://www.tehnoinstrument.ro
-http://www.technoelectric.ro
-http://termice.ro
-http://www.asio.ro
-http://www.kleinenstern.de
-http://www.transelectrica.ro
-http://www.transelectrica.ro
-http://www.julianenbrunnen.de
+https://en.wikipedia.org/wiki/Earth_observation_satellite
