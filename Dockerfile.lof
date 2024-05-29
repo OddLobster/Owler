@@ -4,8 +4,8 @@ WORKDIR /app
 
 COPY lof_api.py /app
 # COPY data/model/corpus_embedding_d_0_rp.hdf5 /app/data/model/corpus_embedding.hdf5
-COPY data/model/corpus_bert_embeddings.hdf5 /app/data/model/corpus_embedding.hdf5
-# COPY data/model/corpus_embedding_d_0_rp_nochunk.hdf5 /app/data/model/corpus_embedding.hdf5
+# COPY data/model/corpus_bert_embeddings.hdf5 /app/data/model/corpus_embedding.hdf5
+COPY data/model/corpus_embedding_d_0_rp_nochunk.hdf5 /app/data/model/corpus_embedding.hdf5
 
 RUN pip install scikit-learn numpy h5py flask
 

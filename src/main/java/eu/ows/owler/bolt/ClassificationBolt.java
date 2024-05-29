@@ -121,7 +121,9 @@ public class ClassificationBolt extends BaseRichBolt {
                     {
                         LOG.info("MALFORMED URL EXCEPTION ? {}", e);
                     }
-                    
+
+                    //TODO rethink this approach, does it even make sense to give non relevant urls a chance as the runtime is so high? 
+                    // could do a comparison 
                     if (newMetadata.containsKey("maxLinkDepth"))
                     {
                         if (pageData.pageBlockRelevance.get(i) == false)
@@ -135,6 +137,7 @@ public class ClassificationBolt extends BaseRichBolt {
                                 newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
                                 newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
                                 collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
+                                collector.ack(input);
                                 continue;      
                             }
                             newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
@@ -153,14 +156,15 @@ public class ClassificationBolt extends BaseRichBolt {
                         Outlink outlink = new Outlink(childUrl);
                         outlink.setMetadata(newMetadata);
                         outlinksList.add(childUrl);
-                        
+                        LOG.info("EMITTED CHILD URL: {}", outlink.getTargetURL());
                         collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
+                    }
+                    else{
+                        LOG.info("CHILD ALREADY CRAWLED: {}", childUrl);
                     }
                 }
             }
 
-            // metadata.setValues("outlinks", outlinksList.toArray(new String[outlinksList.size()]));
-            LOG.info("OUTLINKS FOR URL: {} |\n {} \n@@@@", url, outlinksList.toString());
         }
         long endTime = System.currentTimeMillis();
 

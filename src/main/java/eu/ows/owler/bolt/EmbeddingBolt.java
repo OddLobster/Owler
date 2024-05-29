@@ -157,6 +157,7 @@ public class EmbeddingBolt extends BaseRichBolt {
             LOG.info("Already embedded: {}, nextFetchDate: {}", url);
             return;
         }
+        
         urlCache.setUrlAsEmbedded(url);
 
         // create embedding for each block
@@ -173,7 +174,6 @@ public class EmbeddingBolt extends BaseRichBolt {
             INDArray value = output.get("output");
             INDArray meanEmbedding = value.mean(1);
             double[] embedding = meanEmbedding.data().asDouble();
-            LOG.info("EMBEDDING: ", embedding.toString());
             // writeEmbeddingToFile(embedding, "/outdata/dummy_embedding_"+i+".txt");
             blockEmbeddings.add(embedding);
         }
@@ -198,5 +198,6 @@ public class EmbeddingBolt extends BaseRichBolt {
         pageData.blockEmbeddings = blockEmbeddings;
         pageData.pageTextEmbedding = pageTextEmbedding;
         collector.emit(input, new Values(url, content, metadata, pageData));
+        collector.ack(input);
     }
 }

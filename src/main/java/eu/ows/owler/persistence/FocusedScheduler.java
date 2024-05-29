@@ -7,7 +7,8 @@ import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import eu.ows.owler.util.CustomScore;
 import java.util.*;
-
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 /**
  * In this scheduler, we use the default scheduler with modification on case of fetch status code. When focused crawling we dont want to recrawl a URL if it was already processed. 
  * We apply our quality evaluation directly on the defaultFetchInterval.
@@ -35,15 +36,26 @@ public class FocusedScheduler extends Scheduler {
     @Override
     public Optional<Date> schedule(Status status, Metadata metadata) {
         int minutesIncrement = 0;
+        Date nextFetchDateObject = null;
 
         switch (status) {
             // in case of a focused crawl we dont want to recrawl a url if the already processed it
             case FETCHED:
                 minutesIncrement = -1;
                 break;
+            // in case we discovered a new url to crawl we set it to nextfetchdate instead of now
             case DISCOVERED:
-                AS_IS_NEXTFETCHDATE_METADATA
-            
+                String nextFetchDate = metadata.getFirstValue(AS_IS_NEXTFETCHDATE_METADATA);
+                if (nextFetchDate != null)
+                {
+                    Instant nextFetchInstant = Instant.parse(nextFetchDate);
+                    Instant epoch = Instant.EPOCH;
+                    long minutesFromEpoch = ChronoUnit.MINUTES.between(epoch, nextFetchInstant);
+                    nextFetchDateObject = Date.from(epoch.plus(minutesFromEpoch, ChronoUnit.MINUTES));
+                }else{
+                    minutesIncrement = -1;
+                }
+                break;
             case FETCH_ERROR:
                 minutesIncrement = fetchErrorFetchInterval;
                 break;
@@ -59,9 +71,12 @@ public class FocusedScheduler extends Scheduler {
         if (minutesIncrement == -1) {
             return Optional.empty();
         }
-
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.MINUTE, minutesIncrement);
+        if (nextFetchDateObject != null) {
+            cal.setTime(nextFetchDateObject);
+        } else {
+            cal.add(Calendar.MINUTE, minutesIncrement);
+        }
 
         return Optional.of(cal.getTime());
     }
