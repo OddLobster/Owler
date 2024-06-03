@@ -48,7 +48,6 @@ public class EmbeddingBolt extends BaseRichBolt {
     private OutputCollector collector;
     private static final Logger LOG = LoggerFactory.getLogger(EmbeddingBolt.class);
     private OnnxRuntimeRunner runner;
-    private Map<String, Integer> vocabulary;
     private int max_embedding_length = 512;
     private URLCache urlCache;
     private static final String AS_IS_NEXTFETCHDATE_METADATA = "status.store.as.is.with.nextfetchdate";
@@ -66,18 +65,6 @@ public class EmbeddingBolt extends BaseRichBolt {
 
         this.runner = OnnxRuntimeRunner.builder().modelUri(modelFilename).build();
         
-        this.vocabulary = new HashMap<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader("/bert/model/bert_vocabulary.txt"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] tokenInfo = line.split(" ");
-                vocabulary.put(tokenInfo[0], Integer.parseInt(tokenInfo[1]));
-            }
-            reader.close();
-        } catch (NumberFormatException | IOException e) {
-            e.printStackTrace();
-        }
-
         String redisHost = ConfUtils.getString(stormConf, "redis.host", "frue_ra_redis");
         int redisPort = ConfUtils.getInt(stormConf, "redis.port", 6379);
         urlCache = new URLCache(redisHost, redisPort);

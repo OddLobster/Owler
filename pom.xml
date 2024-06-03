@@ -126,10 +126,10 @@
 			<plugin>
 				<groupId>org.owasp</groupId>
 				<artifactId>dependency-check-maven</artifactId>
-				<version>6.1.0</version>
+				<version>6.5.3</version>
 				<configuration>
 					<skipSystemScope>true</skipSystemScope>
-    				<assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+    				<assemblyAnalyzerEnabled>true</assemblyAnalyzerEnabled>
 				</configuration>
 
 				<executions>
@@ -421,16 +421,6 @@
 		</dependency>
 
 
-		<dependency>
-			<groupId>eu.ows</groupId>
-			<artifactId>urlfrontier-API</artifactId>
-			<version>0.3-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>eu.ows</groupId>
-			<artifactId>urlfrontier-core</artifactId>
-			<version>0.3-SNAPSHOT</version>
-		</dependency>
 
 		<dependency>
 			<groupId>redis.clients</groupId>
