@@ -1,14 +1,12 @@
 package eu.ows.owler.bolt;
 
-import com.digitalpebble.stormcrawler.parse.Outlink;
-
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,35 +16,24 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xml.sax.InputSource;
 import org.apache.storm.tuple.Values;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xml.sax.InputSource;
 
-import java.nio.charset.Charset;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.util.CharsetIdentification;
-import de.l3s.boilerpipe.extractors.DefaultExtractor;
-import de.l3s.boilerpipe.document.TextDocument;
+import com.digitalpebble.stormcrawler.util.URLUtil;
+
 import de.l3s.boilerpipe.document.TextBlock;
-import de.l3s.boilerpipe.extractors.ArticleExtractor;
+import de.l3s.boilerpipe.document.TextDocument;
 import de.l3s.boilerpipe.extractors.CommonExtractors;
 import de.l3s.boilerpipe.sax.BoilerpipeSAXInput;
 import de.l3s.boilerpipe.sax.HTMLDocument;
-import de.l3s.boilerpipe.sax.HTMLFetcher;
-import org.jsoup.nodes.Document;
-import org.jsoup.parser.Parser;
-import java.nio.ByteBuffer;
-import java.io.FileWriter;
-import java.io.PrintWriter;
-import java.net.MalformedURLException;
-import java.net.URL;
-import com.digitalpebble.stormcrawler.util.URLUtil;
-
 import eu.ows.owler.util.PageData;
 
 
@@ -141,8 +128,6 @@ public class PageSegmentBolt extends BaseRichBolt {
             while (matcher.find()) {
                 textReplacedLinks = new StringBuilder(textReplacedLinks);
                 int linkIndex = Integer.parseInt(matcher.group(1));
-                // FIXME
-                // something like this: URLUtil.resolveURL(url, aElement.attr("href")).toString()
                 try{
                     linksInBlock.add(URLUtil.resolveURL(new URL(url), links.get(linkIndex)).toString());
                 } catch (MalformedURLException e)

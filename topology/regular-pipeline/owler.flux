@@ -91,6 +91,9 @@ bolts:
   - id: "index"
     className: "com.digitalpebble.stormcrawler.indexing.DummyIndexer"
     parallelism: 1
+  - id: "warc_preprocessor"
+    className: "eu.ows.owler.warc.WARCBlockPrepareBolt"
+    parallelism: 1
   - id: "warc"
     className: "eu.ows.owler.warc.OWSWARCHdfsBolt"
     parallelism: 1
@@ -163,6 +166,16 @@ streams:
   - from: "embedder"
     to: "index"
     grouping:
+      type: LOCAL_OR_SHUFFLE
+
+  - from: "classifier"
+    to: "warc_preprocessor"
+    grouping: 
+      type: LOCAL_OR_SHUFFLE
+
+  - from: "warc_preprocessor"
+    to: "warc"
+    grouping: 
       type: LOCAL_OR_SHUFFLE
 
   - from: "fetcher"

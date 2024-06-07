@@ -1,13 +1,13 @@
 package eu.ows.owler.warc;
 
-import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.warc.WARCRequestRecordFormat;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy.Units;
@@ -19,6 +19,10 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
+import com.digitalpebble.stormcrawler.warc.WARCRequestRecordFormat;
 
 public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdfsBolt {
 
@@ -67,6 +71,18 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
     @Override
     protected AbstractHDFSWriter makeNewWriter(Path path, Tuple tuple) throws IOException {
         AbstractHDFSWriter writer = super.makeNewWriter(path, tuple);
+
+        LOG.info("CALLED OWS WARC BOLT");
+        LOG.info("PATH: {}", path.getName());
+
+        try 
+        {
+            PrintWriter filewriter = new PrintWriter(new FileWriter("/outdata/warc/warc.txt"));
+            filewriter.println("Test WARC");
+        } catch (Exception e)
+        {
+            LOG.info("FAILED TO WRITE WARC FILE TO FILE");
+        }
 
         Instant now = Instant.now();
 
