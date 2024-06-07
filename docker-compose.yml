@@ -51,7 +51,7 @@ services:
       - "127.0.0.1:3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     networks:
-      - frontier
+      - frue_ra_storm_network
       
   # Apache Storm components
   # - Zookeeper coordinates the communication between Nimbus and the Supervisors

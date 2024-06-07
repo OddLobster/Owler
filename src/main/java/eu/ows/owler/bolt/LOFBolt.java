@@ -12,6 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -19,20 +25,13 @@ import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
-import com.digitalpebble.stormcrawler.Metadata;
-
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import eu.ows.owler.util.PageData;
+import com.digitalpebble.stormcrawler.Metadata;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
-import org.json.JSONObject;
+import eu.ows.owler.util.PageData;
 
 public class LOFBolt extends BaseRichBolt {
     private OutputCollector collector;
@@ -101,6 +100,8 @@ public class LOFBolt extends BaseRichBolt {
                 
             } catch (Exception e) {
                 LOG.error("Failed prediction", e);
+                outlierScores.add(-1.0f);
+                predictions.add("-1");
             }
         }
         pageData.pageStats.pageBlockOutlierScores = outlierScores;

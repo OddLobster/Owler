@@ -9,7 +9,11 @@ fastclean:
 	MY_UID=$$(id -u) MY_GID=$$(id -g) docker-compose -f docker-compose.yml up -d --build --renew-anon-volumes
 
 run:
-	mvn clean install -DskipTests -T 24
+	mvn clean install -DskipTests -Pskip-owasp-check -T 24
+	MY_UID=$$(id -u) MY_GID=$$(id -g) docker-compose -f docker-compose.yml up -d --build --renew-anon-volumes
+
+runnocache:
+	mvn install -DskipTests -Pskip-owasp-check -Dmaven.build.cache.enabled=false
 	MY_UID=$$(id -u) MY_GID=$$(id -g) docker-compose -f docker-compose.yml up -d --build --renew-anon-volumes
 
 build:
