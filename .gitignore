@@ -45,3 +45,5 @@ logs/
 /.idea/uiDesigner.xml
 data/
 output/
+
+dev.properties
