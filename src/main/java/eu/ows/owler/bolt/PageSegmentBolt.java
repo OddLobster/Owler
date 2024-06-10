@@ -66,6 +66,27 @@ public class PageSegmentBolt extends BaseRichBolt {
 
         return processedBlocks;
     }
+    
+    private static String getHtmlForBlock(String originalHtml, TextBlock block) {
+        String blockText = block.getText().trim();
+        Document document = Jsoup.parse(originalHtml);
+
+        Element elementContainingText = findElementContainingText(document, blockText);
+
+        return elementContainingText.html();
+    }
+
+    private static Element findElementContainingText(Element root, String text) {
+        Elements elements = root.getAllElements();
+
+        for (Element element : elements) {
+            if (element.text().contains(text)) {
+                return element;
+            }
+        }
+
+        return null;
+    }
 
     @Override
     public void execute(Tuple input) {
@@ -99,10 +120,17 @@ public class PageSegmentBolt extends BaseRichBolt {
         {
             HTMLDocument htmlDoc = new HTMLDocument(annotatedHtml.getBytes(), Charset.forName(charset));
             InputSource is = htmlDoc.toInputSource();
+            // LOG.info("htmldoc getData() {}",htmlDoc.getData());
             TextDocument document = new BoilerpipeSAXInput(is).getTextDocument();
+            LOG.info("Document debugstring: {}", document.debugString());
             Boolean changedDocument = CommonExtractors.DEFAULT_EXTRACTOR.process(document);
             blocks = document.getTextBlocks();
             text = document.getText(true, true);
+
+            for (TextBlock block : blocks) {
+                String blockHtml = getHtmlForBlock(annotatedHtml, block);
+                LOG.info("Block HTML content: " + blockHtml);
+            }
         }
         catch (Exception e)
         {
