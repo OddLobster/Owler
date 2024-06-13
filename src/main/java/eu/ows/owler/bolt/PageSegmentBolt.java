@@ -35,12 +35,14 @@ import de.l3s.boilerpipe.extractors.CommonExtractors;
 import de.l3s.boilerpipe.sax.BoilerpipeSAXInput;
 import de.l3s.boilerpipe.sax.HTMLDocument;
 import eu.ows.owler.util.PageData;
+import net.dankito.readability4j.Article;
+import net.dankito.readability4j.Readability4J;
 
 
 public class PageSegmentBolt extends BaseRichBolt {
     private OutputCollector collector;
     private static final Logger LOG = LoggerFactory.getLogger(PageSegmentBolt.class);
-    private final int NUM_WORDS_BLOCK = 10;
+    private final int NUM_WORDS_BLOCK = 5;
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -67,25 +69,29 @@ public class PageSegmentBolt extends BaseRichBolt {
         return processedBlocks;
     }
     
-    private static String getHtmlForBlock(String originalHtml, TextBlock block) {
-        String blockText = block.getText().trim();
+    private static String getHtmlForBlock(String originalHtml, String blockText) {
         Document document = Jsoup.parse(originalHtml);
 
         Element elementContainingText = findElementContainingText(document, blockText);
-
+        if (elementContainingText == null)
+        {
+            return "coudlnt find element text: " + blockText;
+        }
         return elementContainingText.html();
     }
 
     private static Element findElementContainingText(Element root, String text) {
         Elements elements = root.getAllElements();
+        Element innermostElement = null;
 
         for (Element element : elements) {
             if (element.text().contains(text)) {
-                return element;
+                if (innermostElement == null || innermostElement.text().length() >= element.text().length()) {
+                    innermostElement = element;
+                }
             }
         }
-
-        return null;
+        return innermostElement;
     }
 
     @Override
@@ -99,6 +105,44 @@ public class PageSegmentBolt extends BaseRichBolt {
 
         String charset = CharsetIdentification.getCharset(metadata, content, -1);
         String html = Charset.forName(charset).decode(ByteBuffer.wrap(content)).toString();
+
+        Readability4J readability4J = new Readability4J(url, html);
+        Article article = readability4J.parse();
+        String extractedContentHtml = article.getContent();
+        String extractedContentHtmlWithUtf8Encoding = article.getContentWithUtf8Encoding();
+        String extractedContentPlainText = article.getTextContent();
+
+        //TODO remove
+        // try 
+        // {
+        //     PrintWriter writer = new PrintWriter(new FileWriter("/outdata/documents/"+url.replace("/", "").replace(".", "")+"_readability4j.html"));
+        //     writer.println("@@@@@@@@@@ extractedContentHtml");
+        //     writer.println(extractedContentHtml);
+        //     writer.println("@@@@@@@@@@ extractedContentHtmlWithUtf8Encoding");
+        //     writer.println(extractedContentHtmlWithUtf8Encoding);
+        //     writer.println("@@@@@@@@@@ extractedContentPlainText");
+        //     writer.println(extractedContentPlainText);
+        //     writer.close();
+        // }
+        // catch (Exception e) 
+        // {
+        //     LOG.info("Failed to write prediction debug info to file {}", e);
+        //     e.printStackTrace();
+        // }
+
+        // //TODO remove
+        // try 
+        // {
+        //     PrintWriter writer = new PrintWriter(new FileWriter("/outdata/documents/"+url.replace("/", "").replace(".", "")+".html"));
+        //     writer.println(html);
+
+        //     writer.close();
+        // }
+        // catch (Exception e) 
+        // {
+        //     LOG.info("Failed to write prediction debug info to file {}", e);
+        //     e.printStackTrace();
+        // }
         
         Document jsoupDoc = Jsoup.parse(html);
         Elements hrefs = jsoupDoc.select("a[href]");
@@ -122,15 +166,9 @@ public class PageSegmentBolt extends BaseRichBolt {
             InputSource is = htmlDoc.toInputSource();
             // LOG.info("htmldoc getData() {}",htmlDoc.getData());
             TextDocument document = new BoilerpipeSAXInput(is).getTextDocument();
-            LOG.info("Document debugstring: {}", document.debugString());
             Boolean changedDocument = CommonExtractors.DEFAULT_EXTRACTOR.process(document);
             blocks = document.getTextBlocks();
             text = document.getText(true, true);
-
-            for (TextBlock block : blocks) {
-                String blockHtml = getHtmlForBlock(annotatedHtml, block);
-                LOG.info("Block HTML content: " + blockHtml);
-            }
         }
         catch (Exception e)
         {
@@ -165,7 +203,7 @@ public class PageSegmentBolt extends BaseRichBolt {
                 }
                 // linksInBlock.add(links.get(linkIndex));
                 String anchorText = anchorTexts.get(linkIndex);
-                textReplacedLinks = textReplacedLinks.replace(matcher.start(), matcher.end(), " " + anchorText + " ");
+                textReplacedLinks = textReplacedLinks.replace(matcher.start(), matcher.end(), anchorText);
                 matcher = pattern.matcher(textReplacedLinks.toString());
             }
 
@@ -178,12 +216,29 @@ public class PageSegmentBolt extends BaseRichBolt {
             }
         }
 
+        // //TODO remove
+        // try 
+        // {
+        //     PrintWriter writer = new PrintWriter(new FileWriter("/outdata/documents/"+url.replace("/", "").replace(".", "")+"_textblocks.html"));
+        //     for (String blockText : blockTexts) {
+        //         writer.println("blockText: " + blockText);
+        //     }
+        //     writer.close();
+        // }
+        // catch (Exception e) 
+        // {
+        //     LOG.info("Failed to write prediction debug info to file {}", e);
+        //     e.printStackTrace();
+        // }
+        
+
+
         LOG.info("Number of content blocks: {} in url: {}", contentBlocks.size(), url);   
 
         long endTime = System.currentTimeMillis();
         LOG.info("PageSegmentBolt processing took time {} ms", endTime-startTime);
 
-        if (contentBlocks.size() == 0)
+        if (contentBlocks.isEmpty())
         {
             LOG.info("Stop processing tuple. No content on webpage.");
             collector.fail(input);

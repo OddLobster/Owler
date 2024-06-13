@@ -1,36 +1,33 @@
 package eu.ows.owler.bolt;
 
-import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
-
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Random;
-import org.apache.storm.tuple.Values;
-import eu.ows.owler.util.PageData;
-import eu.ows.owler.util.URLCache;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.util.MetadataTransfer;
-import com.digitalpebble.stormcrawler.Constants;
+import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.parse.Outlink;
 import com.digitalpebble.stormcrawler.persistence.Status;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
+import com.digitalpebble.stormcrawler.util.MetadataTransfer;
+
+import eu.ows.owler.util.PageData;
+import eu.ows.owler.util.URLCache;
 
 public class ClassificationBolt extends BaseRichBolt {
     private OutputCollector collector;

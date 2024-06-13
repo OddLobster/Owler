@@ -3,6 +3,7 @@ package eu.ows.owler.warc;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -70,19 +71,11 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
 
     @Override
     protected AbstractHDFSWriter makeNewWriter(Path path, Tuple tuple) throws IOException {
+        String url = tuple.getStringByField("url");
         AbstractHDFSWriter writer = super.makeNewWriter(path, tuple);
 
         LOG.info("CALLED OWS WARC BOLT");
         LOG.info("PATH: {}", path.getName());
-
-        try 
-        {
-            PrintWriter filewriter = new PrintWriter(new FileWriter("/outdata/warc/warc.txt"));
-            filewriter.println("Test WARC");
-        } catch (Exception e)
-        {
-            LOG.info("FAILED TO WRITE WARC FILE TO FILE");
-        }
 
         Instant now = Instant.now();
 
@@ -98,6 +91,20 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
         if (header != null && header.length > 0) {
             super.out.write(Utils.gzip(header));
         }
+
+        try 
+        {
+            String[] parts = url.split("/");
+            String lastPart = parts[parts.length - 1];
+            PrintWriter filewriter = new PrintWriter(new FileWriter("/outdata/warc/" + lastPart + ".txt"));
+            String headerString = new String(header, StandardCharsets.UTF_8);
+            filewriter.println(headerString);
+
+        } catch (Exception e)
+        {
+            LOG.info("FAILED TO WRITE WARC FILE TO FILE");
+        }
+
 
         return writer;
     }
