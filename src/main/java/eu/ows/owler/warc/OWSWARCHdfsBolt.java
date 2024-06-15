@@ -1,9 +1,6 @@
 package eu.ows.owler.warc;
 
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -43,7 +40,9 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
         // dummy sync policy
         withSyncPolicy(new CountSyncPolicy(10));
         // default local filesystem
-        withFsUrl("s3a://owlerbucket");
+        // withFsUrl("s3a://owlerbucket");
+        withFsUrl("/outdata/warc");
+
     }
 
     public OWSWARCHdfsBolt withHeader(Map<String, String> header_fields) {
@@ -74,16 +73,11 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
         String url = tuple.getStringByField("url");
         AbstractHDFSWriter writer = super.makeNewWriter(path, tuple);
 
-        LOG.info("CALLED OWS WARC BOLT");
-        LOG.info("PATH: {}", path.getName());
-
         Instant now = Instant.now();
 
         // overrides the filename and creation date in the headers
         header_fields.put("WARC-Date", OWSWARCRecordFormat.WARC_DF.format(now));
         header_fields.put("WARC-Filename", path.getName());
-
-        LOG.info("Opening WARC file {}", path);
 
         byte[] header = OWSWARCRecordFormat.generateWARCInfo(header_fields);
 
@@ -91,20 +85,6 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
         if (header != null && header.length > 0) {
             super.out.write(Utils.gzip(header));
         }
-
-        try 
-        {
-            String[] parts = url.split("/");
-            String lastPart = parts[parts.length - 1];
-            PrintWriter filewriter = new PrintWriter(new FileWriter("/outdata/warc/" + lastPart + ".txt"));
-            String headerString = new String(header, StandardCharsets.UTF_8);
-            filewriter.println(headerString);
-
-        } catch (Exception e)
-        {
-            LOG.info("FAILED TO WRITE WARC FILE TO FILE");
-        }
-
 
         return writer;
     }

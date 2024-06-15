@@ -1,12 +1,24 @@
 package eu.ows.owler.bolt;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+
 import com.digitalpebble.stormcrawler.parse.Outlink;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -16,9 +28,13 @@ import org.apache.storm.tuple.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import eu.ows.owler.util.PageData;
+
 public class HITSBolt extends BaseRichBolt {
     private OutputCollector collector;
     private static final Logger LOG = LoggerFactory.getLogger(HITSBolt.class);
+
+    public Map<String, Set<String>> webgraph = new HashMap<>();
 
     public Map<String, Set<String>> links = new HashMap<>();
     public Map<String, Double> authorities = new HashMap<>();
@@ -26,6 +42,7 @@ public class HITSBolt extends BaseRichBolt {
     private int triggerCounter = 0;
     private final int computationTriggerThreshold = 100;
     private int callCounter = 0;
+    private Boolean createWebGraph = true;
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -41,11 +58,55 @@ public class HITSBolt extends BaseRichBolt {
         links.putIfAbsent(from, new HashSet<String>());
         links.get(from).add(to);
 
+        webgraph.putIfAbsent(from, new HashSet<String>());
+        webgraph.get(from).add(to);
+
         // init hub and auth scores
         authorities.putIfAbsent(from, 1.0);
         authorities.putIfAbsent(to, 1.0);
         hubs.putIfAbsent(from, 1.0);
         hubs.putIfAbsent(to, 1.0);
+    }
+
+    private void writeGraphToFile()
+    {
+        int numFiles = 0;
+        try (Stream<Path> filesStream = Files.list(Paths.get("/outdata/graph"))) {
+            numFiles = (int) filesStream.filter(Files::isRegularFile).count();
+        } catch (Exception e)
+        {
+            LOG.info("Failed to get number of files in Folder {}: {}", "/outdata/graph", e);
+        }
+
+        File file = new File("/outdata/graph/webgraph"+numFiles+".json");
+
+        // Serialize
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            objectMapper.writeValue(file, webgraph);
+            LOG.info("Serialization successful. Data written to webgraph.json");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void readWebGraphFromFile()
+    {
+        File file = new File("/outdata/graph/webgraph.json");
+
+        // Deserialize
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            Map<String, Set<String>> webgraph = objectMapper.readValue(file, new TypeReference<Map<String, Set<String>>>() {});
+            System.out.println("Deserialization successful. Data read from webgraph.json");
+            
+            // Print the data to verify
+            for (Map.Entry<String, Set<String>> entry : links.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void performHITS(int numIterations) {
@@ -99,18 +160,28 @@ public class HITSBolt extends BaseRichBolt {
     public void execute(Tuple input) {
 
         String url = input.getStringByField("url");
-        List<Outlink> child_urls = (List<Outlink>) input.getValueByField("child_urls");
+        PageData pageData = (PageData) input.getValueByField("pageData");
+
+        List<String> childUrls = new ArrayList<>();
+        for (List<String> block : pageData.blockLinks) {
+            childUrls.addAll(block);
+        }
 
         callCounter += 1;
         LOG.info("Called HITS {} times", callCounter);
-        for (Outlink child : child_urls) {
-            addLinkToGraph(url, child.getTargetURL());
+        for (String child : childUrls) {
+            addLinkToGraph(url, child);
         }
 
         triggerCounter += 1;
         if (triggerCounter < computationTriggerThreshold) {
             return;
         }
+        if (createWebGraph)
+        {
+            writeGraphToFile();
+        }
+
         LOG.info("Performing HITS");
         performHITS(5);
 

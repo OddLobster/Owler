@@ -230,10 +230,10 @@ public class OWSParserBolt extends BaseRichBolt {
                             parseDoc.getMetadata(),
                             parseDoc.getText()));
         }
-
-        collector.emit("segment", new Values(urlString, content, metadata));
-
+        
         LOG.info("OWSParserBolt processing took time: {} ms", System.currentTimeMillis() - start);
+        metadata.setValue("parse.processingTime", Long.toString(System.currentTimeMillis() - start));
+        collector.emit("segment", new Values(urlString, content, metadata));
         collector.ack(tuple);
     }
 

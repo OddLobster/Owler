@@ -70,7 +70,6 @@ public class LOFBolt extends BaseRichBolt {
 
 
         double[] pageEmbedding = pageData.pageTextEmbedding;
-        List<List<String>> blockLinks = pageData.blockLinks;
         List<String> pageTextBlocks = pageData.blockTexts;
         List<double[]> pageBlockEmbeddings = pageData.blockEmbeddings;
 
@@ -128,7 +127,7 @@ public class LOFBolt extends BaseRichBolt {
 
 
         // NOTE this is only temporary. Need to figure out proper classification. (Decision tree thresholds??????)
-        Boolean pageIsRelevant = ((float)numRelevantBlocks/predictions.size()) > RELEVANT_THRESHOLD ? true : false;
+        Boolean pageIsRelevant = ((float)numRelevantBlocks/predictions.size()) > RELEVANT_THRESHOLD;
 
 
         Float wholePageLOFVariance = 0.0f;
@@ -141,7 +140,7 @@ public class LOFBolt extends BaseRichBolt {
         List<Float> pageSegmentLOFVariances = new ArrayList<>();
         List<Float> pageSegmentRelevantBlockPercentages = new ArrayList<>();        
 
-        if (predictions.size() > 0)
+        if (!predictions.isEmpty())
         {
                     
             int segmentSize = outlierScores.size() / NUM_SEGMENTS;
@@ -193,6 +192,7 @@ public class LOFBolt extends BaseRichBolt {
         LOG.info("{} relevant blocks in url: {}", Integer.toString(numRelevantBlocks), url);
         long endTime = System.currentTimeMillis();
         LOG.info("LOFBolt processing time: {} ms", endTime - startTime);
+        pageData.addBoltProcessingTime("LOFBolt", endTime - startTime);
 
 
         pageData.pageStats.numSegments = NUM_SEGMENTS;

@@ -181,7 +181,8 @@ public class EmbeddingBolt extends BaseRichBolt {
         
         long endTime = System.currentTimeMillis();
         LOG.info("EmbeddingBolt processing took time {} ms. \n Blocks processed: {}", (endTime - startTime), blocks.size());
-        
+        pageData.addBoltProcessingTime("embeddingBolt", endTime - startTime);
+
         pageData.blockEmbeddings = blockEmbeddings;
         pageData.pageTextEmbedding = pageTextEmbedding;
         collector.emit(input, new Values(url, content, metadata, pageData));

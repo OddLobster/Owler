@@ -1,6 +1,8 @@
 package eu.ows.owler.bolt;
 
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -107,10 +109,16 @@ public class PageSegmentBolt extends BaseRichBolt {
         String html = Charset.forName(charset).decode(ByteBuffer.wrap(content)).toString();
 
         Readability4J readability4J = new Readability4J(url, html);
-        Article article = readability4J.parse();
-        String extractedContentHtml = article.getContent();
-        String extractedContentHtmlWithUtf8Encoding = article.getContentWithUtf8Encoding();
-        String extractedContentPlainText = article.getTextContent();
+        try
+        {
+            Article article = readability4J.parse();
+            String extractedContentHtml = article.getContent();
+            String extractedContentHtmlWithUtf8Encoding = article.getContentWithUtf8Encoding();
+            String extractedContentPlainText = article.getTextContent();
+        } catch (Exception e)
+        {
+            LOG.info("Failed to parse Readability4J");
+        }
 
         //TODO remove
         // try 
@@ -194,12 +202,22 @@ public class PageSegmentBolt extends BaseRichBolt {
             while (matcher.find()) {
                 textReplacedLinks = new StringBuilder(textReplacedLinks);
                 int linkIndex = Integer.parseInt(matcher.group(1));
+                String child_url = "";
+                LOG.info("POTENTIAL CHILD URL: {}", links.get(linkIndex));
                 try{
-                    linksInBlock.add(URLUtil.resolveURL(new URL(url), links.get(linkIndex)).toString());
+                    child_url = URLUtil.resolveURL(new URL(url), links.get(linkIndex)).toString();
                 } catch (MalformedURLException e)
                 {
-                    LOG.info("MALFORMED URL EXCEPTION IN PAGE SEGMENT: {}", url);
-                    LOG.info("EXECPTION: {}", url);
+                    LOG.debug("MALFORMED URL EXCEPTION IN PAGE SEGMENT: {}", url);
+                    LOG.debug("EXECPTION: {}", e);
+                }
+                try{
+                    URI uri = new URI(child_url);
+                    URI normalizedUri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), uri.getQuery(), null);
+                    linksInBlock.add(normalizedUri.toString());
+                } catch (URISyntaxException e)
+                {
+                    LOG.debug("EXECPTION: {}", e);
                 }
                 // linksInBlock.add(links.get(linkIndex));
                 String anchorText = anchorTexts.get(linkIndex);
@@ -237,6 +255,7 @@ public class PageSegmentBolt extends BaseRichBolt {
 
         long endTime = System.currentTimeMillis();
         LOG.info("PageSegmentBolt processing took time {} ms", endTime-startTime);
+        pageData.addBoltProcessingTime("pageSegmentBolt", endTime - startTime);
 
         if (contentBlocks.isEmpty())
         {

@@ -4,7 +4,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -98,7 +97,6 @@ public class ClassificationBolt extends BaseRichBolt {
         pageData.isRelevant = pageIsRelevant;
 
         if (pageIsRelevant) {
-            List<String> outlinksList = new ArrayList<>();
             for (int i = 0; i < pageData.blockLinks.size(); i++)
             {
                 for (int j = 0; j < pageData.blockLinks.get(i).size(); j++)
@@ -131,6 +129,7 @@ public class ClassificationBolt extends BaseRichBolt {
 
                             if (linkDepth == -1)
                             {
+                                LOG.info("EXCLUDING URL {}. MAX IRRELEVANT DEPTH REACHED", url);
                                 newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
                                 newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
                                 collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
@@ -140,7 +139,7 @@ public class ClassificationBolt extends BaseRichBolt {
                             newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
                         }
                     }
-                    if (childUrl == url)
+                    if (childUrl.equals(url))
                     {
                         continue;
                     }
@@ -152,7 +151,6 @@ public class ClassificationBolt extends BaseRichBolt {
                     {
                         Outlink outlink = new Outlink(childUrl);
                         outlink.setMetadata(newMetadata);
-                        outlinksList.add(childUrl);
                         LOG.info("EMITTED CHILD URL: {}", outlink.getTargetURL());
                         collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
                     }
@@ -161,11 +159,11 @@ public class ClassificationBolt extends BaseRichBolt {
                     }
                 }
             }
-
         }
         long endTime = System.currentTimeMillis();
 
         LOG.info("ClassificationBolt processing took time {} ms", endTime - startTime);
+        pageData.addBoltProcessingTime("classificationBolt", endTime - startTime);
         LOG.info("Metadata for {} is \n{}", url, metadata);
 
         // refetchable_from_date=0 indicates this url is done with processing and shouldnt be processed in the future

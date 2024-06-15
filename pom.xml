@@ -429,10 +429,17 @@
 		</dependency>
 
 		<dependency>
-		<groupId>net.dankito.readability4j</groupId>
-		<artifactId>readability4j</artifactId>
-		<version>1.0.8</version>
+			<groupId>net.dankito.readability4j</groupId>
+			<artifactId>readability4j</artifactId>
+			<version>1.0.8</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.13.3</version>
+		</dependency>
+
 
  </dependencies>
  
