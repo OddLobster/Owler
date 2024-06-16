@@ -61,12 +61,12 @@ bolts:
   - id: "fetcher"
     className: "eu.ows.owler.bolt.FetcherBolt"
     parallelism: 1
-#  - id: "fetcher"
-#    className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
-#    parallelism: 1
   - id: "parser"
     className: "eu.ows.owler.bolt.OWSParserBolt"
     parallelism: 2
+  - id: "hits"
+    className: "eu.ows.owler.bolt.HITSBolt"
+    parallelism: 1
   - id: "segmenter"
     className: "eu.ows.owler.bolt.PageSegmentBolt"
     parallelism: 1
@@ -79,6 +79,9 @@ bolts:
   - id: "lof"
     className: "eu.ows.owler.bolt.LOFBolt"
     parallelism: 2
+  - id: "eval"
+    className: "eu.ows.owler.bolt.EvaluationBolt"
+    parallelism: 1
   - id: "shunt"
     className: "com.digitalpebble.stormcrawler.tika.RedirectionBolt"
     parallelism: 1
@@ -147,6 +150,11 @@ streams:
     grouping:
       type: LOCAL_OR_SHUFFLE
 
+  - from: "lof"
+    to: "hits"
+    grouping:
+      type: LOCAL_OR_SHUFFLE
+
   - from: "parser"
     to: "shunt"
     grouping:
@@ -169,12 +177,12 @@ streams:
       type: LOCAL_OR_SHUFFLE
 
   - from: "classifier"
-    to: "warc_preprocessor"
+    to: "eval"
     grouping: 
       type: LOCAL_OR_SHUFFLE
 
-  - from: "warc_preprocessor"
-    to: "warc"
+  - from: "eval"
+    to: "warc_preprocessor"
     grouping: 
       type: LOCAL_OR_SHUFFLE
 

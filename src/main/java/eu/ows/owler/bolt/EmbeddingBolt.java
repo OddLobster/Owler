@@ -1,17 +1,12 @@
 package eu.ows.owler.bolt;
-import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
-import com.digitalpebble.stormcrawler.persistence.Status;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -19,38 +14,30 @@ import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
-import org.deeplearning4j.text.tokenization.tokenizer.Tokenizer;
-import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
-import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.onnxruntime.runner.OnnxRuntimeRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import de.l3s.boilerpipe.document.TextBlock;
-import eu.ows.owler.util.URLCache;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.time.format.DateTimeFormatter;
-
 
 import com.ankit.bert.tokenizerimpl.BertTokenizer;
-
+import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
 import com.digitalpebble.stormcrawler.Metadata;
+import com.digitalpebble.stormcrawler.persistence.Status;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
 
+import de.l3s.boilerpipe.document.TextBlock;
 import eu.ows.owler.util.PageData;
+import eu.ows.owler.util.URLCache;
 
 public class EmbeddingBolt extends BaseRichBolt {
     private OutputCollector collector;
     private static final Logger LOG = LoggerFactory.getLogger(EmbeddingBolt.class);
     private OnnxRuntimeRunner runner;
-    private int max_embedding_length = 512;
     private URLCache urlCache;
     private static final String AS_IS_NEXTFETCHDATE_METADATA = "status.store.as.is.with.nextfetchdate";
+    private int max_embedding_length = 512;
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -141,7 +128,6 @@ public class EmbeddingBolt extends BaseRichBolt {
             metadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
             collector.emit(StatusStreamName, input, new Values(url, metadata, Status.FETCHED)); 
             collector.ack(input);        
-            LOG.info("Already embedded: {}, nextFetchDate: {}", url);
             return;
         }
         

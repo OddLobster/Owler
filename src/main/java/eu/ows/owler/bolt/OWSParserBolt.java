@@ -1,8 +1,36 @@
 package eu.ows.owler.bolt;
 
-import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
+import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.DocumentFragment;
 
 import com.digitalpebble.stormcrawler.Constants;
+import static com.digitalpebble.stormcrawler.Constants.StatusStreamName;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.filtering.URLFilters;
 import com.digitalpebble.stormcrawler.parse.DocumentFragmentBuilder;
@@ -19,37 +47,8 @@ import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.MetadataTransfer;
 import com.digitalpebble.stormcrawler.util.RefreshTag;
 import com.digitalpebble.stormcrawler.util.URLUtil;
+
 import eu.ows.owler.util.RobotsTags;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import org.apache.commons.lang.StringUtils;
-import org.apache.storm.task.OutputCollector;
-import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.apache.storm.topology.base.BaseRichBolt;
-import org.apache.storm.tuple.Fields;
-import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.parser.Parser;
-import org.jsoup.select.Elements;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.DocumentFragment;
 import eu.ows.owler.util.URLCache;
 
 public class OWSParserBolt extends BaseRichBolt {
@@ -89,7 +88,14 @@ public class OWSParserBolt extends BaseRichBolt {
         final byte[] content = tuple.getBinaryByField("content");
         if (!metadata.containsKey("maxLinkDepth"))
         {
-            metadata.setValue("maxLinkDepth", "1");
+            // irrelevant block maxLinkDepth
+            metadata.setValue("maxLinkDepth", "5"); //TODO test good maxLinkDepth
+        }
+
+        if(!metadata.containsKey("maxPageLinkDepth"))
+        {
+            // irrelevant page maxLinkDepth
+            metadata.setValue("maxPageLinkDepth", "1");
         }
 
         LOG.info("Parsing started for {}", urlString);

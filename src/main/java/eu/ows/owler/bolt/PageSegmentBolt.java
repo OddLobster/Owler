@@ -203,7 +203,6 @@ public class PageSegmentBolt extends BaseRichBolt {
                 textReplacedLinks = new StringBuilder(textReplacedLinks);
                 int linkIndex = Integer.parseInt(matcher.group(1));
                 String child_url = "";
-                LOG.info("POTENTIAL CHILD URL: {}", links.get(linkIndex));
                 try{
                     child_url = URLUtil.resolveURL(new URL(url), links.get(linkIndex)).toString();
                 } catch (MalformedURLException e)

@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.digitalpebble.stormcrawler.Metadata;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
 
 import eu.ows.owler.util.PageData;
 
@@ -38,6 +39,7 @@ public class LOFBolt extends BaseRichBolt {
     private static final Logger LOG = LoggerFactory.getLogger(LOFBolt.class);
     private CloseableHttpClient httpClient;
     private static final String OUTPUT_FOLDER = "/outdata/documents/";
+    private float blockRelevanceSensitivity = 0.0f;
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -48,6 +50,7 @@ public class LOFBolt extends BaseRichBolt {
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         this.collector = collector;
         this.httpClient = HttpClients.createDefault();
+        blockRelevanceSensitivity = ConfUtils.getFloat(stormConf, "relevantBlockThreshold", 0.0f);
     }
 
     @Override
@@ -93,7 +96,7 @@ public class LOFBolt extends BaseRichBolt {
                 JSONObject responseJson = new JSONObject(result);
                 String prediction = responseJson.getString("prediction"); 
                 String lof_score = responseJson.getString("lof_score");
-                outlierScores.add(Float.parseFloat(lof_score));
+                outlierScores.add(Float.parseFloat(lof_score) - blockRelevanceSensitivity);
                 predictions.add(prediction);
                 response.close();
                 
@@ -106,7 +109,7 @@ public class LOFBolt extends BaseRichBolt {
         pageData.pageStats.pageBlockOutlierScores = outlierScores;
         pageData.pageStats.pageBlockPredictions = predictions;
 
-        double RELEVANT_THRESHOLD = 0.2;
+        double RELEVANT_THRESHOLD = 0.0;
         int NUM_SEGMENTS = 4;
         List<Boolean> pageBlockRelevance = new ArrayList<>();
 
@@ -225,6 +228,8 @@ public class LOFBolt extends BaseRichBolt {
         String filename = OUTPUT_FOLDER + "failed.txt";
         String[] parts = url.split("/");
         String lastPart = parts[parts.length - 1];
+        String pagePrediction = "";
+        String pageOutlierfactor = "";
         try (Stream<Path> filesStream = Files.list(Paths.get(OUTPUT_FOLDER))) {
             int numFiles = (int) filesStream.filter(Files::isRegularFile).count();
             
@@ -233,19 +238,24 @@ public class LOFBolt extends BaseRichBolt {
         {
             LOG.info("Failed to get number of files in Folder {}: {}", OUTPUT_FOLDER, e);
         }
-        JSONObject json = new JSONObject();
-        json.put("embedding", pageEmbedding);
-        HttpPost post = new HttpPost("http://lof-service:43044/predict");
-        post.setHeader("Content-Type", "application/json");
-        post.setEntity(new StringEntity(json.toString(), StandardCharsets.UTF_8));
-        String result = "fuck";
-        try{
-            CloseableHttpResponse response = this.httpClient.execute(post);
-            result = EntityUtils.toString(response.getEntity());
-        } catch (Exception e) {LOG.info("Failed page Prediction: ", e);}
-        JSONObject responseJson = new JSONObject(result);
-        String pagePrediction = responseJson.getString("prediction"); 
-        String pageOutlierfactor = responseJson.getString("lof_score");
+        try {
+            JSONObject json = new JSONObject();
+            json.put("embedding", pageEmbedding);
+            HttpPost post = new HttpPost("http://lof-service:43044/predict");
+            post.setHeader("Content-Type", "application/json");
+            post.setEntity(new StringEntity(json.toString(), StandardCharsets.UTF_8));
+            String result = "fuck";
+            try{
+                CloseableHttpResponse response = this.httpClient.execute(post);
+                result = EntityUtils.toString(response.getEntity());
+            } catch (Exception e) {LOG.info("Failed page Prediction: ", e);}
+            JSONObject responseJson = new JSONObject(result);
+            pagePrediction = responseJson.getString("prediction"); 
+            pageOutlierfactor = responseJson.getString("lof_score");
+        } catch(Exception e)
+        {
+            LOG.info("SOME EXCEPTION HAPPENED WHILE PREDICTING WHOLE PAGE: {}", e);
+        }
 
         try 
         {

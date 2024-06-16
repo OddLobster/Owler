@@ -119,6 +119,7 @@ config:
     - url.path
     - maxLinkDepth
     - parentRelevance
+    - maxPageLinkDepth
 
   # lists the metadata to store in the WARC files
   warc.metadata:
@@ -143,6 +144,9 @@ config:
   parser.emitOutlinks: false
 
   nimbus.seeds: ["storm-nimbus"]
+
+  # get subtracted from LOF prediction score, the higher the value the more strict the classification
+  relevantBlockThreshold: 0.1
 
 
   awscreds:

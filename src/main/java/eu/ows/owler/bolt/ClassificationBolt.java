@@ -96,67 +96,87 @@ public class ClassificationBolt extends BaseRichBolt {
         LOG.info("Classificaiton of {} is : {}", url, Boolean.toString(pageIsRelevant));
         pageData.isRelevant = pageIsRelevant;
 
-        if (pageIsRelevant) {
-            for (int i = 0; i < pageData.blockLinks.size(); i++)
-            {
-                for (int j = 0; j < pageData.blockLinks.get(i).size(); j++)
-                {   
-                    String childUrl = pageData.blockLinks.get(i).get(j);
-                    double pageBlockLinkRelevance = (pageData.pageRelevance * PARENT_INFLUENCE_FACTOR) + pageData.pageStats.pageBlockOutlierScores.get(i);
-                    LOG.info("PageBlockRelevance: {} | PageBlockLinkRelevance: {}", pageData.pageStats.pageBlockOutlierScores.get(i), pageBlockLinkRelevance);
-                    
-                    long mappedSeconds = Math.round((1 + (MAX_SECONDS - 1) * (1 - (pageBlockLinkRelevance - MIN_RELEVANCE) / (MAX_RELEVANCE - MIN_RELEVANCE))));
 
-                    Metadata newMetadata = new Metadata();
-                    try
-                    {
-                        newMetadata = mdTransfer.getMetaForOutlink(childUrl, new URL(url).toExternalForm(), metadata); 
-                    }
-                    catch (MalformedURLException e)
-                    {
-                        LOG.info("MALFORMED URL EXCEPTION ? {}", e);
-                    }
+        for (int i = 0; i < pageData.blockLinks.size(); i++)
+        {
+            for (int j = 0; j < pageData.blockLinks.get(i).size(); j++)
+            {   
+                String childUrl = pageData.blockLinks.get(i).get(j);
+                double pageBlockLinkRelevance = (pageData.pageRelevance * PARENT_INFLUENCE_FACTOR) + pageData.pageStats.pageBlockOutlierScores.get(i);
+                LOG.info("PageBlockRelevance: {} | PageBlockLinkRelevance: {} | link: {}", pageData.pageStats.pageBlockOutlierScores.get(i), pageBlockLinkRelevance, childUrl);
+                long mappedSeconds = Math.round((1 + (MAX_SECONDS - 1) * (1 - (pageBlockLinkRelevance - MIN_RELEVANCE) / (MAX_RELEVANCE - MIN_RELEVANCE))));
 
-                    //TODO rethink this approach, does it even make sense to give non relevant urls a chance as the runtime is so high? 
-                    // could do a comparison 
-                    if (newMetadata.containsKey("maxLinkDepth"))
+                Metadata newMetadata = new Metadata();
+                try
+                {
+                    newMetadata = mdTransfer.getMetaForOutlink(childUrl, new URL(url).toExternalForm(), metadata); 
+                }
+                catch (MalformedURLException e)
+                {
+                    LOG.info("MALFORMED URL EXCEPTION ? {}", e);
+                }
+                
+                // page tunneling
+                if (!pageData.isRelevant)
+                {
+                    if (newMetadata.containsKey("maxPageLinkDepth"))
                     {
-                        if (pageData.pageBlockRelevance.get(i) == false)
+                        int maxPageLinkDepth = Integer.valueOf(newMetadata.getFirstValue("maxPageLinkDepth"));
+                        maxPageLinkDepth -= 1;
+                        if (maxPageLinkDepth == -1)
                         {
-                            // decrement maxLinkDepth
-                            int linkDepth = Integer.valueOf(newMetadata.getFirstValue("maxLinkDepth"));
-                            linkDepth -= 1;
-
-                            if (linkDepth == -1)
-                            {
-                                LOG.info("EXCLUDING URL {}. MAX IRRELEVANT DEPTH REACHED", url);
-                                newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
-                                newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
-                                collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
-                                collector.ack(input);
-                                continue;      
-                            }
-                            newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
+                            LOG.info("EXCLUDING URL {}. MAX IRRELEVANT PAGE DEPTH REACHED", url);
+                            newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
+                            newMetadata.setValue("maxPageLinkDepth", Integer.toString(maxPageLinkDepth));     
+                            collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
+                            collector.ack(input);
+                            break;
                         }
+                        newMetadata.setValue("maxPageLinkDepth", Integer.toString(maxPageLinkDepth));   
                     }
-                    if (childUrl.equals(url))
-                    {
-                        continue;
-                    }
+                }
 
-                    Instant timeNow = Instant.ofEpochSecond(mappedSeconds);
-                    String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(timeNow);
-                    newMetadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
-                    if (urlCache.isUrlCrawled(childUrl) == false)
+                //TODO rethink this approach, does it even make sense to give non relevant urls a chance as the runtime is so high? 
+                // could do a comparison 
+
+                // block tunneling
+                if (newMetadata.containsKey("maxLinkDepth"))
+                {
+                    if (pageData.pageBlockRelevance.get(i) == false)
                     {
-                        Outlink outlink = new Outlink(childUrl);
-                        outlink.setMetadata(newMetadata);
-                        LOG.info("EMITTED CHILD URL: {}", outlink.getTargetURL());
-                        collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
+                        // decrement maxLinkDepth
+                        int linkDepth = Integer.valueOf(newMetadata.getFirstValue("maxLinkDepth"));
+                        linkDepth -= 1;
+
+                        if (linkDepth == -1)
+                        {
+                            LOG.info("EXCLUDING URL {}. MAX IRRELEVANT DEPTH REACHED", url);
+                            newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
+                            newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
+                            collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
+                            collector.ack(input);
+                            continue;
+                        }
+                        newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
                     }
-                    else{
-                        LOG.info("CHILD ALREADY CRAWLED: {}", childUrl);
-                    }
+                }
+                
+                if (childUrl.equals(url))
+                {
+                    continue;
+                }
+
+                Instant timeNow = Instant.ofEpochSecond(mappedSeconds);
+                String nextFetchDate = DateTimeFormatter.ISO_INSTANT.format(timeNow);
+                newMetadata.setValue(AS_IS_NEXTFETCHDATE_METADATA, nextFetchDate);
+                if (urlCache.isUrlCrawled(childUrl) == false)
+                {
+                    Outlink outlink = new Outlink(childUrl);
+                    outlink.setMetadata(newMetadata);
+                    collector.emit(StatusStreamName, input, new Values(outlink.getTargetURL(), outlink.getMetadata(), Status.DISCOVERED));
+                }
+                else{
+                    LOG.info("CHILD ALREADY CRAWLED: {}", childUrl);
                 }
             }
         }

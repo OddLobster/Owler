@@ -1,5 +1,8 @@
 package eu.ows.owler.bolt;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,6 +30,8 @@ public class EvaluationBolt extends BaseRichBolt {
     private List<String> relevantLinksToFind = new ArrayList<>();
     private float harvestRate = 1;
     private long totalProcessingTime = 0;
+    private int numTargetLinks = 0;
+    private int numTargetLinksFound = 0;
 
 
     @Override
@@ -37,6 +42,13 @@ public class EvaluationBolt extends BaseRichBolt {
     @Override
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         this.collector = collector;
+        String filePath = "/data/relevantLinksToFind.txt";
+        try {
+            relevantLinksToFind = Files.readAllLines(Paths.get(filePath));
+        } catch (IOException e) {
+            LOG.info("Failed to read eval urls {}", e);
+        }
+        numTargetLinks = relevantLinksToFind.size();
         
     }
 
@@ -65,7 +77,7 @@ public class EvaluationBolt extends BaseRichBolt {
             numRelevantUrls++;
         }
 
-        harvestRate = numRelevantUrls/numTotalUrls;
+        harvestRate = (float)numRelevantUrls/numTotalUrls;
 
         for (Float lofScore : pageData.pageStats.pageBlockOutlierScores)
         {
@@ -79,16 +91,28 @@ public class EvaluationBolt extends BaseRichBolt {
             sumOfInformation = sumOfInformation/pageData.pageStats.pageBlockOutlierScores.size();
         }
 
+        if (relevantLinksToFind.contains(url))
+        {
+            numTargetLinksFound += 1;
+        }
+
         String[] urlPath = metadata.getValues("url.path");
-        
+        int depth = 0;
+        if (urlPath != null)
+        {
+            depth = urlPath.length;
+        }
         float processingTimeSeconds = processingTimeMs / 1000.0f;
         float totalProcessingTimeSeconds = totalProcessingTime / 1000.0f;
 
         LOG.info("EVAL URLPATH: {}", Arrays.toString(urlPath));
+        LOG.info("EVAL PATH DEPTH: {}", depth);
         LOG.info("EVAL HARVEST RATE: {}", harvestRate);
         LOG.info("EVAL NUM RELEVANT URLS: {}", numRelevantUrls);
         LOG.info("EVAL NUM TOTAL URLS: {}", numTotalUrls);
         LOG.info("EVAL SUM OF INFORMATION: {}", sumOfInformation);
+        LOG.info("EVAL TARGET RECALL: {}", numTargetLinksFound/numTargetLinks);
+
         LOG.info("EVAL PROCESSING TIME: {} ms ({} s)", processingTimeMs, processingTimeSeconds);
         LOG.info("EVAL TOTAL PROCESSING TIME: {} ms ({} s)", totalProcessingTime, totalProcessingTimeSeconds);
 
