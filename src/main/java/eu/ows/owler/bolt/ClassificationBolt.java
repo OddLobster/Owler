@@ -117,49 +117,49 @@ public class ClassificationBolt extends BaseRichBolt {
                 }
                 
                 // page tunneling
-                if (!pageData.isRelevant)
-                {
-                    if (newMetadata.containsKey("maxPageLinkDepth"))
-                    {
-                        int maxPageLinkDepth = Integer.valueOf(newMetadata.getFirstValue("maxPageLinkDepth"));
-                        maxPageLinkDepth -= 1;
-                        if (maxPageLinkDepth == -1)
-                        {
-                            LOG.info("EXCLUDING URL {}. MAX IRRELEVANT PAGE DEPTH REACHED", url);
-                            newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
-                            newMetadata.setValue("maxPageLinkDepth", Integer.toString(maxPageLinkDepth));     
-                            collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
-                            collector.ack(input);
-                            break;
-                        }
-                        newMetadata.setValue("maxPageLinkDepth", Integer.toString(maxPageLinkDepth));   
-                    }
-                }
+                // if (!pageData.isRelevant)
+                // {
+                //     if (newMetadata.containsKey("maxPageLinkDepth"))
+                //     {
+                //         int maxPageLinkDepth = Integer.valueOf(newMetadata.getFirstValue("maxPageLinkDepth"));
+                //         maxPageLinkDepth -= 1;
+                //         if (maxPageLinkDepth == -1)
+                //         {
+                //             LOG.info("EXCLUDING URL {}. MAX IRRELEVANT PAGE DEPTH REACHED", url);
+                //             newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
+                //             newMetadata.setValue("maxPageLinkDepth", Integer.toString(maxPageLinkDepth));     
+                //             collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
+                //             collector.ack(input);
+                //             break;
+                //         }
+                //         newMetadata.setValue("maxPageLinkDepth", Integer.toString(maxPageLinkDepth));   
+                //     }
+                // }
 
                 //TODO rethink this approach, does it even make sense to give non relevant urls a chance as the runtime is so high? 
                 // could do a comparison 
 
                 // block tunneling
-                if (newMetadata.containsKey("maxLinkDepth"))
-                {
-                    if (pageData.pageBlockRelevance.get(i) == false)
-                    {
-                        // decrement maxLinkDepth
-                        int linkDepth = Integer.valueOf(newMetadata.getFirstValue("maxLinkDepth"));
-                        linkDepth -= 1;
+                // if (newMetadata.containsKey("maxLinkDepth"))
+                // {
+                //     if (pageData.pageBlockRelevance.get(i) == false)
+                //     {
+                //         // decrement maxLinkDepth
+                //         int linkDepth = Integer.valueOf(newMetadata.getFirstValue("maxLinkDepth"));
+                //         linkDepth -= 1;
 
-                        if (linkDepth == -1)
-                        {
-                            LOG.info("EXCLUDING URL {}. MAX IRRELEVANT DEPTH REACHED", url);
-                            newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
-                            newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
-                            collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
-                            collector.ack(input);
-                            continue;
-                        }
-                        newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
-                    }
-                }
+                //         if (linkDepth == -1)
+                //         {
+                //             LOG.info("EXCLUDING URL {}. MAX IRRELEVANT DEPTH REACHED", url);
+                //             newMetadata.remove(AS_IS_NEXTFETCHDATE_METADATA);
+                //             newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
+                //             collector.emit(StatusStreamName, input, new Values(url, newMetadata, Status.FETCHED));   
+                //             collector.ack(input);
+                //             continue;
+                //         }
+                //         newMetadata.setValue("maxLinkDepth", Integer.toString(linkDepth));     
+                //     }
+                // }
                 
                 if (childUrl.equals(url))
                 {

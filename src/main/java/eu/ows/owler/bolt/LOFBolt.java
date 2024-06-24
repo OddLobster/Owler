@@ -96,7 +96,12 @@ public class LOFBolt extends BaseRichBolt {
                 JSONObject responseJson = new JSONObject(result);
                 String prediction = responseJson.getString("prediction"); 
                 String lof_score = responseJson.getString("lof_score");
-                outlierScores.add(Float.parseFloat(lof_score) - blockRelevanceSensitivity);
+                float adjustedLofScore = Float.parseFloat(lof_score) - blockRelevanceSensitivity;
+                outlierScores.add(adjustedLofScore);
+                if (adjustedLofScore < 0)
+                {
+                    prediction = "-1";
+                }
                 predictions.add(prediction);
                 response.close();
                 

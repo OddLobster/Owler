@@ -1,5 +1,6 @@
 package eu.ows.owler.bolt;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -32,6 +33,7 @@ public class EvaluationBolt extends BaseRichBolt {
     private long totalProcessingTime = 0;
     private int numTargetLinks = 0;
     private int numTargetLinksFound = 0;
+    private final String LOG_FILE_PATH = "/outdata/stats/RUN_NO_TUNNELING_1.txt";
 
 
     @Override
@@ -116,7 +118,21 @@ public class EvaluationBolt extends BaseRichBolt {
         LOG.info("EVAL PROCESSING TIME: {} ms ({} s)", processingTimeMs, processingTimeSeconds);
         LOG.info("EVAL TOTAL PROCESSING TIME: {} ms ({} s)", totalProcessingTime, totalProcessingTimeSeconds);
 
-
+        try (FileWriter writer = new FileWriter(LOG_FILE_PATH, true)) {
+            writer.write("EVAL URL: " + url);
+            writer.write("EVAL URLPATH: " + Arrays.toString(urlPath) + "\n");
+            writer.write("EVAL PATH DEPTH: " + depth + "\n");
+            writer.write("EVAL HARVEST RATE: " + harvestRate + "\n");
+            writer.write("EVAL NUM RELEVANT URLS: " + numRelevantUrls + "\n");
+            writer.write("EVAL NUM TOTAL URLS: " + numTotalUrls + "\n");
+            writer.write("EVAL SUM OF INFORMATION: " + sumOfInformation + "\n");
+            writer.write("EVAL TARGET RECALL: " + String.format("%.2f", (double) numTargetLinksFound / numTargetLinks) + "\n");
+            writer.write("EVAL PROCESSING TIME: " + processingTimeMs + " ms (" + processingTimeSeconds + " s)\n");
+            writer.write("EVAL TOTAL PROCESSING TIME: " + totalProcessingTime + " ms (" + totalProcessingTimeSeconds + " s)\n");
+            writer.write("\n");  // Add a newline for better readability
+        } catch (IOException e) {
+            System.err.println("Error writing to log file: " + e.getMessage());
+        }
       
         collector.emit(input, new Values(url, content, metadata, pageData));
         collector.ack(input);
