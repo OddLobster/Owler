@@ -1,0 +1,19 @@
+in the root directory clone the following repos:
+owler:
+    git clone https://github.com/OddLobster/Owler
+owler utilities:
+    git clone https://github.com/OddLobster/OwlerUtil
+url-frontier:
+    git clone https://github.com/crawler-commons/url-frontier.git
+
+generate corpus embedding file from web data:
+    navigate to OwlerUtil/SeedGathering/seeds.py
+    run: python seeds.py
+    this will generate a seeds_earth_observation.txt file, that can be used as starting seeds (the reference corpus embedding will be generated from the text of these urls as well)
+    Additionally, the script will generate a corpus_embedding_d_0.hdf5 file
+        move this into the owler repository under data/model/  (create folders if they dont exist)
+    The seeds URLs for the crawl should currently be in the root directory of Owler (where all of the dockerfiles are) (will refactor this soon)
+        the file has to be named: seeds.txt (or change it in the Dockerfile.owler)
+
+run owler:
+    change to owler root directory and run: make run
