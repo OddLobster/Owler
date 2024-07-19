@@ -1,7 +1,7 @@
 ensure you are on a linux based OS
 
 
-in the root directory clone the following repos:
+in the root directory of the project (not the owler root directory) clone the following repos:
 owler:
     git clone https://github.com/OddLobster/Owler
 owler utilities:
