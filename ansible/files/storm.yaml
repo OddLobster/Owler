@@ -1,0 +1,6 @@
+storm.log.dir: "/var/log/storm"
+storm.zookeeper.servers: 
+  - "{{master_ip}}"
+nimbus.seeds: ["{{master_ip}}"]
+worker.heap.memory.mb: 3072
+worker.childopts: "-Xmx%HEAP-MEM%m" 

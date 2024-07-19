@@ -56,7 +56,7 @@ spouts:
     - id: "frontierspout"
       className: "eu.ows.owler.spout.FrontierSpout"
       parallelism: 1
-      
+
 bolts:
   - id: "fetcher"
     className: "eu.ows.owler.bolt.FetcherBolt"
@@ -177,13 +177,13 @@ streams:
       type: LOCAL_OR_SHUFFLE
 
   - from: "classifier"
-    to: "eval"
-    grouping: 
+    to: "warc_preprocessor"
+    grouping:
       type: LOCAL_OR_SHUFFLE
 
-  - from: "eval"
+  - from: "warc_preprocessor"
     to: "warc_preprocessor"
-    grouping: 
+    grouping:
       type: LOCAL_OR_SHUFFLE
 
   - from: "fetcher"

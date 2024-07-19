@@ -20,39 +20,39 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  prometheus:
-    image: prom/prometheus
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - /home/lobster/Desktop/Projects/url-frontier/service/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-    networks:
-      - frue_ra_storm_network
+#   prometheus:
+#     image: prom/prometheus
+#     container_name: prometheus
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - /home/lobster/Desktop/Projects/url-frontier/service/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+#     command:
+#       - '--config.file=/etc/prometheus/prometheus.yml'
+#     networks:
+#       - frue_ra_storm_network
 
-  grafana:
-    image: grafana/grafana:8.3.5
-    container_name: grafana
-    volumes:
-      - /home/lobster/Desktop/Projects/url-frontier/service/monitoring/:/etc/grafana/provisioning/
-    ports:
-      - "3000:3000"
-    networks:
-      - frue_ra_storm_network
+  # grafana:
+  #   image: grafana/grafana:8.3.5
+  #   container_name: grafana
+  #   volumes:
+  #     - /home/lobster/Desktop/Projects/url-frontier/service/monitoring/:/etc/grafana/provisioning/
+  #   ports:
+  #     - "3000:3000"
+  #   networks:
+  #     - frue_ra_storm_network
 
-  loki:
-    image: grafana/loki:2.4.2
-    container_name: loki
-    volumes:
-      - /home/lobster/Desktop/Projects/url-frontier/service/monitoring/local-config.yml:/etc/loki/local-config.yaml
-    ports:
-      - "127.0.0.1:3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
-    networks:
-      - frue_ra_storm_network
-      
+  # loki:
+  #   image: grafana/loki:2.4.2
+  #   container_name: loki
+  #   volumes:
+  #     - /home/lobster/Desktop/Projects/url-frontier/service/monitoring/local-config.yml:/etc/loki/local-config.yaml
+  #   ports:
+  #     - "127.0.0.1:3100:3100"
+  #   command: -config.file=/etc/loki/local-config.yaml
+  #   networks:
+  #     - frue_ra_storm_network
+
   # Apache Storm components
   # - Zookeeper coordinates the communication between Nimbus and the Supervisors
   zookeeper:

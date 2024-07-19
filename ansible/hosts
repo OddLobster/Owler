@@ -1,0 +1,6 @@
+[storm_master]
+localhost ansible_connection=local master_ip=127.0.0.1
+[storm_worker]
+localhost ansible_connection=local
+
+

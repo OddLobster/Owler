@@ -1,3 +1,6 @@
+ensure you are on a linux based OS
+
+
 in the root directory clone the following repos:
 owler:
     git clone https://github.com/OddLobster/Owler
@@ -6,8 +9,14 @@ owler utilities:
 url-frontier:
     git clone https://github.com/crawler-commons/url-frontier.git
 
+(Optional):
+    owler-installation-toolkit:
+        git clone https://opencode.it4i.eu/openwebsearcheu-public/owler-installation-toolkit.git
+
+
 generate corpus embedding file from web data:
     navigate to OwlerUtil/SeedGathering/seeds.py
+    install all requirements: pip install -r requirements.txt
     run: python seeds.py
     this will generate a seeds_earth_observation.txt file, that can be used as starting seeds (the reference corpus embedding will be generated from the text of these urls as well)
     Additionally, the script will generate a corpus_embedding_d_0.hdf5 file
@@ -15,5 +24,36 @@ generate corpus embedding file from web data:
     The seeds URLs for the crawl should currently be in the root directory of Owler (where all of the dockerfiles are) (will refactor this soon)
         the file has to be named: seeds.txt (or change it in the Dockerfile.owler)
 
+Convert BERT model into onnx format:
+    move into the root directory of OwlerUtil
+    run the following commands:
+        pip install -r requirements.txt
+        python convert_bert.py
+    copy the resulting bert-base-uncased.onnx file into /data/model of the Owler repository
+
+before running owler:
+    install ansible
+    move into the ansible folder and run the ansible playbook that sets up the storm user and downloads apache storm and apache zookeeper
+    run: ansible-playbook -i hosts storm-playbook.yml --ask-become-pass
+
+
+    provide your AWS key in dev.properties to generate WARC files
+
+
 run owler:
     change to owler root directory and run: make run
+
+
+
+
+Additional stuff:
+    make sure the docker daemon is running
+    make sure youre logged in to docker with: docker login
+
+    if you cant install the requirements.txt upgrade your pip:
+        pip install --upgrade pip
+
+
+
+
+
