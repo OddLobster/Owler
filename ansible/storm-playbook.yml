@@ -1,0 +1,186 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    storm_version: 2.6.2
+    zk_version: 3.6.3
+    master_ip: "127.0.0.1"  #run locally
+    storm_user: storm
+    storm_password: 'is1h1ss3cur3en0ugh?'
+    gnu_tar_path: /usr/local/bin/gtar
+
+  gather_facts: yes
+  pre_tasks:
+    - name: Install python for Ansible on Debian/Ubuntu
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+      when: ansible_os_family == "Debian"
+      changed_when: False
+    - setup:
+
+  tasks:
+    - name: Install OpenJDK on Debian/Ubuntu
+      apt:
+        name: openjdk-11-jdk
+        state: present
+        update_cache: yes
+        force: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install OpenJDK on macOS
+      become: no
+      community.general.homebrew:
+        name: openjdk@11
+        state: present
+      when: ansible_os_family == "Darwin"
+
+    - name: Create Storm group
+      group:
+        name: storm
+        state: present
+        system: yes
+
+    - name: Create Storm user
+      user:
+        name: "{{ storm_user }}"
+        password: "{{ storm_password }}"
+        createhome: false
+        group: storm
+        system: yes
+
+    - name: Download Apache Storm {{ storm_version }}
+      get_url:
+        url: "https://dlcdn.apache.org/storm/apache-storm-{{ storm_version }}/apache-storm-{{ storm_version }}.tar.gz"
+        dest: /tmp/apache-storm-{{ storm_version }}.tar.gz
+        owner: storm
+        group: storm
+        timeout: 600
+        force: yes
+
+    - name: Ensure Apache Storm installation directory exists
+      file:
+        path: "/opt/apache-storm-{{ storm_version }}"
+        state: directory
+        owner: storm
+        group: storm
+        mode: '0755'
+
+    - name: Unarchive Apache Storm using GNU Tar
+      command: "{{ gnu_tar_path }} -xzf /tmp/apache-storm-{{ storm_version }}.tar.gz -C /opt/apache-storm-{{ storm_version }}"
+      become: yes
+
+    - name: Ensure ownership and permissions for Apache Storm directory
+      file:
+        path: "/opt/apache-storm-{{ storm_version }}"
+        owner: storm
+        group: storm
+        mode: "u=rwx,g=rwx,o=r"
+        recurse: yes
+        state: directory
+
+    - name: Create symbolic link for storm binary
+      file:
+        src: "/opt/apache-storm-{{ storm_version }}/bin/storm"
+        dest: /usr/local/bin/storm
+        owner: storm
+        group: storm
+        state: link
+
+    - name: Ensure log directory exists
+      file:
+        path: /var/log/storm
+        owner: storm
+        group: storm
+        state: directory
+        mode: "u=rwx,g=rwx,o=r"
+        recurse: yes
+
+    - name: Ensure workers artifacts directory exists
+      file:
+        path: /var/log/storm/workers-artifacts/
+        owner: storm
+        group: storm
+        state: directory
+        mode: "u=rwx,g=rwx,o=rwx"
+        recurse: yes
+
+    - name: Copy Storm configuration file
+      template: src=files/storm.yaml dest="/opt/apache-storm-{{ storm_version }}/conf/storm.yaml"
+
+- hosts: storm_master
+  become: yes
+
+  vars:
+    zk_version: 3.6.3
+    storm_user: storm
+    storm_password: 'is1h1ss3cur3en0ugh?'
+    gnu_tar_path: /usr/local/bin/gtar
+
+  tasks:
+    - name: Create Zookeeper group
+      group:
+        name: zookeeper
+        state: present
+        system: yes
+
+    - name: Create Zookeeper user
+      user:
+        name: zookeeper
+        password: "{{ storm_password }}"
+        createhome: false
+        group: zookeeper
+        system: yes
+
+    - name: Download Zookeeper {{ zk_version }}
+      get_url:
+        url: "https://archive.apache.org/dist/zookeeper/zookeeper-{{ zk_version }}/apache-zookeeper-{{ zk_version }}-bin.tar.gz"
+        dest: /tmp/apache-zookeeper-{{ zk_version }}-bin.tar.gz
+        owner: zookeeper
+        group: zookeeper
+        timeout: 600
+        force: yes
+
+    - name: Ensure Zookeeper installation directory exists
+      file:
+        path: "/opt/zookeeper/apache-zookeeper-{{ zk_version }}-bin"
+        state: directory
+        owner: zookeeper
+        group: zookeeper
+        mode: '0755'
+
+    - name: Unarchive Zookeeper using GNU Tar
+      command: "{{ gnu_tar_path }} -xzf /tmp/apache-zookeeper-{{ zk_version }}-bin.tar.gz -C /opt/zookeeper/apache-zookeeper-{{ zk_version }}-bin --strip-components=1"
+      become: yes
+
+    - name: Copy Zookeeper configuration file
+      copy:
+        src: /opt/zookeeper/apache-zookeeper-{{ zk_version }}-bin/conf/zoo_sample.cfg
+        dest: /opt/zookeeper/apache-zookeeper-{{ zk_version }}-bin/conf/zoo.cfg
+        owner: zookeeper
+        group: zookeeper
+        remote_src: yes
+
+    - name: Add line to Zookeeper configuration
+      lineinfile:
+        path: /opt/zookeeper/apache-zookeeper-{{ zk_version }}-bin/conf/zoo.cfg
+        line: admin.enableServer=false
+
+- hosts: storm_worker
+  become: yes
+
+  vars:
+    storm_version: 2.6.2
+    storm_user: storm
+    storm_password: 'is1h1ss3cur3en0ugh?'
+
+  tasks:
+    - name: Ensure workers artifacts directory exists
+      file:
+        path: /var/log/storm/workers-artifacts/
+        owner: storm
+        group: storm
+        state: directory
+        mode: "u=rwx,g=rwx,o=rwx"
+        recurse: yes
+
+    - name: Copy Storm configuration file
+      template: src=files/storm.yaml dest="/opt/apache-storm-{{ storm_version }}/conf/storm.yaml"
