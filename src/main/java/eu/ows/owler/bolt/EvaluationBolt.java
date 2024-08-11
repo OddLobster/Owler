@@ -33,7 +33,7 @@ public class EvaluationBolt extends BaseRichBolt {
     private long totalProcessingTime = 0;
     private int numTargetLinks = 0;
     private int numTargetLinksFound = 0;
-    private final String LOG_FILE_PATH = "/outdata/stats/RUN_NO_TUNNELING_1.txt";
+    private final String LOG_FILE_PATH = "/outdata/stats/RUN_NO_TUNNELING_1wg2.txt";
 
 
     @Override
@@ -119,7 +119,7 @@ public class EvaluationBolt extends BaseRichBolt {
         LOG.info("EVAL TOTAL PROCESSING TIME: {} ms ({} s)", totalProcessingTime, totalProcessingTimeSeconds);
 
         try (FileWriter writer = new FileWriter(LOG_FILE_PATH, true)) {
-            writer.write("EVAL URL: " + url);
+            writer.write("EVAL URL: " + url + "\n");
             writer.write("EVAL URLPATH: " + Arrays.toString(urlPath) + "\n");
             writer.write("EVAL PATH DEPTH: " + depth + "\n");
             writer.write("EVAL HARVEST RATE: " + harvestRate + "\n");

@@ -47,9 +47,9 @@ config:
   topology.eventlogger.executors: 1
 
   # Metrics consumers:
-  # topology.metrics.consumer.register:
-  #   - class: "org.apache.storm.metric.LoggingMetricsConsumer"
-  #     parallelism.hint: 1
+  topology.metrics.consumer.register:
+    - class: "org.apache.storm.metric.LoggingMetricsConsumer"
+      parallelism.hint: 1
 
   # URLFrontier configurations
   urlfrontier.host: "${urlfrontier.host}"
@@ -146,7 +146,11 @@ config:
   nimbus.seeds: ["storm-nimbus"]
 
   # get subtracted from LOF prediction score, the higher the value the more strict the classification
-  relevantBlockThreshold: 0.1
+  relevantBlockThreshold: 0.05
+
+  # credentials of redis instance
+  redis.host: "frue_ra_redis"
+  redis.port: 6379
 
 
   awscreds:

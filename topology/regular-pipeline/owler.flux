@@ -182,8 +182,8 @@ streams:
       type: LOCAL_OR_SHUFFLE
 
   - from: "warc_preprocessor"
-    to: "warc_preprocessor"
-    grouping:
+    to: "warc"
+    grouping: 
       type: LOCAL_OR_SHUFFLE
 
   - from: "fetcher"

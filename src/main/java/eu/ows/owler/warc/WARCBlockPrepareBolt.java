@@ -42,6 +42,7 @@ public class WARCBlockPrepareBolt extends BaseRichBolt {
 
         for(String text : pageData.blockTexts)
         {
+            LOG.info("Sending text to WARCBolt: ", text);
             byte[] textBytes = text.getBytes();
             collector.emit(input, new Values(url, textBytes, metadata));
         }

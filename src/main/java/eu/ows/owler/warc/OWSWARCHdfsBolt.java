@@ -41,7 +41,7 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
         withSyncPolicy(new CountSyncPolicy(10));
         // default local filesystem
         // withFsUrl("s3a://owlerbucket");
-        withFsUrl("/outdata/warc");
+        withFsUrl("/outdata/warc/warc-test");
 
     }
 
@@ -78,6 +78,8 @@ public class OWSWARCHdfsBolt extends com.digitalpebble.stormcrawler.warc.GzipHdf
         // overrides the filename and creation date in the headers
         header_fields.put("WARC-Date", OWSWARCRecordFormat.WARC_DF.format(now));
         header_fields.put("WARC-Filename", path.getName());
+
+        LOG.info("Writing WARC File:", path.getName());
 
         byte[] header = OWSWARCRecordFormat.generateWARCInfo(header_fields);
 

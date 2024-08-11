@@ -188,6 +188,16 @@ services:
       - 6379:6379
     restart: always
 
+  tfidf-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.tfidf
+    container_name: flask_tfidf_api
+    networks:
+      - frue_ra_storm_network
+    ports:
+      - 5000:5000
+
 networks:
   frue_ra_storm_network:
     driver: bridge
