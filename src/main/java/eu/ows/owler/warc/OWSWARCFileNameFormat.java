@@ -31,6 +31,10 @@ public class OWSWARCFileNameFormat implements FileNameFormat {
         this.crawlerName = crawlerName;
     }
 
+    public OWSWARCFileNameFormat() {
+        this.crawlerName = "defaultCrawlerName";
+    }
+    
     @Override
     public void prepare(Map<String, Object> conf, TopologyContext topologyContext) {}
 
